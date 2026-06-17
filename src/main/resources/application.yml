@@ -1,0 +1,86 @@
+spring:
+  config:
+    import: optional:classpath:application-local.yml
+  application:
+    name: yun-ai-agent
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:}
+    username: ${SPRING_DATASOURCE_USERNAME:}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  ai:
+    model:
+      chat: openai
+      embedding: dashscope
+    dashscope:
+      embedding:
+        enabled: true
+    openai:
+      api-key: ${OPENAI_API_KEY:${DASHSCOPE_API_KEY:}}
+      base-url: ${OPENAI_BASE_URL}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL}
+      embedding:
+        options:
+          model: text-embedding-3-small
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        model: gemma3:1b
+    mcp:
+      client:
+        enabled: ${APP_MCP_CLIENT_ENABLED}
+        sse:
+          connections:
+            image-search:
+              url: ${APP_MCP_IMAGE_SEARCH_URL}
+    vectorstore:
+      pgvector:
+        initialize-schema: true
+        index-type: HNSW
+        dimensions: 1536
+        distance-type: COSINE_DISTANCE
+        max-document-batch-size: 10000
+
+server:
+  port: 8123
+  servlet:
+    context-path: /api
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: default
+      paths-to-match: /**
+      packages-to-scan: com.yun.yunaiagent.controller
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+search-api:
+  api-key: ${SEARCH_API_API_KEY:}
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET:}
+    expiration: ${APP_JWT_EXPIRATION}
+  tools:
+    workspace: ${APP_TOOLS_WORKSPACE:${user.dir}}
+    command-timeout-seconds: ${APP_TOOLS_COMMAND_TIMEOUT_SECONDS}
+    max-output-chars: ${APP_TOOLS_MAX_OUTPUT_CHARS}
+
+logging:
+  level:
+    org.springframework.ai: INFO
