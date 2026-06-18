@@ -2,17 +2,26 @@ package com.yun.yunaiagent.tools;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.net.URI;
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -29,11 +38,15 @@ public class ImageGenerationTool implements AgentTool {
     private final ObjectUploader objectUploader;
 
     @Autowired
-    public ImageGenerationTool(ImageGenerationProperties properties, OssObjectStorageService objectStorageService) {
+    public ImageGenerationTool(
+            ImageGenerationProperties properties,
+            @Value("${spring.ai.dashscope.api-key:${dashscope.api-key:}}") String apiKey,
+            OssObjectStorageService objectStorageService
+    ) {
         this(
                 properties,
-                new RestClientDashScopeImageClient(properties, RestClient.create(), new ObjectMapper()),
-                new UrlImageDownloader(RestClient.create()),
+                new RestClientDashScopeImageClient(properties, apiKey, createRestClient(), new ObjectMapper()),
+                new UrlImageDownloader(createRestClient()),
                 objectStorageService::upload
         );
     }
@@ -58,9 +71,6 @@ public class ImageGenerationTool implements AgentTool {
 
     @Tool(description = "根据提示词生成图片，返回可公开访问的图片 URL")
     public String generateImage(String prompt) {
-        if (properties.apiKey() == null || properties.apiKey().isBlank()) {
-            return "图片生成失败：未配置 DASHSCOPE_API_KEY";
-        }
         if (prompt == null || prompt.isBlank()) {
             return "图片生成失败：提示词不能为空";
         }
@@ -87,6 +97,19 @@ public class ImageGenerationTool implements AgentTool {
         return "generated-images/" + LocalDate.now() + "/" + UUID.randomUUID() + extension;
     }
 
+    /**
+     * 创建带超时配置的 RestClient，用于 DashScope API 调用和图片下载。
+     * 连接超时 10 秒，读取超时 120 秒（图片生成接口较慢）。
+     */
+    private static RestClient createRestClient() {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(Duration.ofSeconds(120));
+        return RestClient.builder().requestFactory(requestFactory).build();
+    }
+
     @FunctionalInterface
     interface DashScopeImageClient {
         String generate(String prompt) throws Exception;
@@ -107,44 +130,93 @@ public class ImageGenerationTool implements AgentTool {
 
     private static class RestClientDashScopeImageClient implements DashScopeImageClient {
 
+        private static final Logger log = LoggerFactory.getLogger(ImageGenerationTool.class);
+
         private final ImageGenerationProperties properties;
+
+        private final String apiKey;
 
         private final RestClient restClient;
 
         private final ObjectMapper objectMapper;
 
-        private RestClientDashScopeImageClient(ImageGenerationProperties properties, RestClient restClient, ObjectMapper objectMapper) {
+        private RestClientDashScopeImageClient(ImageGenerationProperties properties, String apiKey,
+                                               RestClient restClient, ObjectMapper objectMapper) {
             this.properties = properties;
+            this.apiKey = apiKey;
             this.restClient = restClient;
             this.objectMapper = objectMapper;
         }
 
         @Override
         public String generate(String prompt) throws Exception {
-            Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("model", properties.effectiveModel());
+            if (apiKey == null || apiKey.isBlank()) {
+                throw new IllegalStateException("未配置 spring.ai.dashscope.api-key");
+            }
+
+            // 构建 DashScope 多模态生成 API 请求体
+            Map<String, Object> userContent = new LinkedHashMap<>();
+            userContent.put("text", prompt);
+
+            Map<String, Object> userMessage = new LinkedHashMap<>();
+            userMessage.put("role", "user");
+            userMessage.put("content", List.of(userContent));
 
             Map<String, Object> input = new LinkedHashMap<>();
-            input.put("prompt", prompt);
+            input.put("messages", List.of(userMessage));
+
+            Map<String, Object> parameters = new LinkedHashMap<>();
+            parameters.put("n", 1);
+            parameters.put("size", properties.effectiveSize());
+            parameters.put("watermark", properties.effectiveWatermark());
+            parameters.put("prompt_extend", properties.effectivePromptExtend());
             if (properties.negativePrompt() != null && !properties.negativePrompt().isBlank()) {
-                input.put("negative_prompt", properties.negativePrompt().trim());
+                parameters.put("negative_prompt", properties.negativePrompt().trim());
             }
+
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("model", properties.effectiveModel());
             payload.put("input", input);
-            payload.put("parameters", Map.of("size", properties.effectiveSize(), "n", 1));
+            payload.put("parameters", parameters);
+
+            String apiUrl = properties.effectiveApiUrl();
+            log.info("Calling DashScope image generation API: {} with model: {}", apiUrl, properties.effectiveModel());
 
             String response = restClient.post()
-                    .uri("https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey())
-                    .header("X-DashScope-Async", "disable")
+                    .uri(apiUrl)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(payload)
                     .retrieve()
+                    .onStatus(HttpStatusCode::isError, (req, res) -> {
+                        byte[] errorBody = res.getBody().readAllBytes();
+                        String errorText = new String(errorBody);
+                        log.error("DashScope API error ({}): {}", res.getStatusCode().value(), errorText);
+                        throw new IllegalStateException("DashScope API 返回错误 " + res.getStatusCode().value() + ": " + errorText);
+                    })
                     .body(String.class);
+
+            log.debug("DashScope API response: {}", response);
             return extractImageUrl(response);
         }
 
         private String extractImageUrl(String response) throws Exception {
             JsonNode root = objectMapper.readTree(response == null ? "{}" : response);
+
+            // DashScope 多模态生成响应: output.choices[0].message.content[0].image
+            JsonNode choices = root.path("output").path("choices");
+            if (choices.isArray() && !choices.isEmpty()) {
+                JsonNode content = choices.get(0).path("message").path("content");
+                if (content.isArray() && !content.isEmpty()) {
+                    String url = content.get(0).path("image").asText("");
+                    if (!url.isBlank()) {
+                        log.info("Extracted image URL from DashScope response");
+                        return url;
+                    }
+                }
+            }
+
+            // 兼容旧版 text2image 响应: output.results[0].url
             JsonNode results = root.path("output").path("results");
             if (results.isArray() && !results.isEmpty()) {
                 String url = results.get(0).path("url").asText("");
@@ -152,10 +224,14 @@ public class ImageGenerationTool implements AgentTool {
                     return url;
                 }
             }
+
+            // 错误信息
+            String code = root.path("code").asText("");
             String message = root.path("message").asText("");
-            if (!message.isBlank()) {
-                throw new IllegalStateException(message);
+            if (!code.isBlank() || !message.isBlank()) {
+                throw new IllegalStateException(code.isBlank() ? message : code + ": " + message);
             }
+            log.warn("DashScope API returned unexpected response format: {}", response);
             return "";
         }
     }
@@ -170,14 +246,17 @@ public class ImageGenerationTool implements AgentTool {
 
         @Override
         public DownloadedImage download(String url) {
-            byte[] bytes = restClient.get()
+            ResponseEntity<byte[]> entity = restClient.get()
                     .uri(URI.create(url))
                     .retrieve()
-                    .body(byte[].class);
+                    .toEntity(byte[].class);
+            byte[] bytes = entity.getBody();
             if (bytes == null || bytes.length == 0) {
                 throw new IllegalStateException("generated image is empty");
             }
-            return new DownloadedImage(bytes, "image/png");
+            MediaType contentType = entity.getHeaders().getContentType();
+            String contentTypeStr = contentType != null ? contentType.toString() : "image/png";
+            return new DownloadedImage(bytes, contentTypeStr);
         }
     }
 }

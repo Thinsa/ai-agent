@@ -185,12 +185,13 @@ const appendDocumentsVariable = () => {
 
 <style scoped>
 .settings-panel {
-  flex: 0 0 calc(50% - 8px);
+  flex: 0 0 50%;
   min-width: 0;
   height: 100%;
   min-height: 0;
   overflow: hidden;
   border-right: 1px solid #e4e7f0;
+  border-left: 1px solid #eef1f7;
   background: #fbfcff;
   color: #323653;
 }

@@ -4,6 +4,7 @@ import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.model.ObjectMetadata;
 import com.yun.yunaiagent.user.AliyunOssProperties;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 
@@ -11,9 +12,11 @@ import java.io.ByteArrayInputStream;
 
 @Service
 @EnableConfigurationProperties(AliyunOssProperties.class)
-public class OssObjectStorageService {
+public class OssObjectStorageService implements DisposableBean {
 
     private final AliyunOssProperties properties;
+
+    private volatile OSS ossClient;
 
     public OssObjectStorageService(AliyunOssProperties properties) {
         this.properties = properties;
@@ -25,17 +28,34 @@ public class OssObjectStorageService {
         metadata.setContentLength(content.length);
         metadata.setContentType(contentType);
 
-        OSS ossClient = new OSSClientBuilder().build(
-                properties.endpoint(),
-                properties.accessKeyId(),
-                properties.accessKeySecret()
-        );
-        try {
-            ossClient.putObject(properties.bucket(), objectKey, new ByteArrayInputStream(content), metadata);
-        } finally {
+        ossClient().putObject(properties.bucket(), objectKey, new ByteArrayInputStream(content), metadata);
+        return publicBaseUrl() + "/" + objectKey;
+    }
+
+    /**
+     * 懒加载获取 OSS 客户端单例，通过双重检查锁保证线程安全。
+     * 阿里云 OSS SDK 客户端是线程安全的，可以跨请求复用。
+     */
+    private OSS ossClient() {
+        if (ossClient == null) {
+            synchronized (this) {
+                if (ossClient == null) {
+                    ossClient = new OSSClientBuilder().build(
+                            properties.endpoint(),
+                            properties.accessKeyId(),
+                            properties.accessKeySecret()
+                    );
+                }
+            }
+        }
+        return ossClient;
+    }
+
+    @Override
+    public void destroy() {
+        if (ossClient != null) {
             ossClient.shutdown();
         }
-        return publicBaseUrl() + "/" + objectKey;
     }
 
     private void validateConfig() {

@@ -115,6 +115,8 @@ public class ToolCallAgent extends ReActAgent {
                 Use searchWeb when the user needs current or internet information.
                 Use generateImage when the user asks to generate, draw, create, or make an image.
                 Keep the answer concise, include useful tool results such as image URLs, and call doTerminate when the task is complete.
+
+                IMPORTANT: If the generateImage tool returns an error or is unavailable, just tell the user the error message. Do NOT try to write Python scripts, shell commands, or any other code to generate images as a workaround.
                 """;
         if (memory.isBlank()) {
             return prompt;

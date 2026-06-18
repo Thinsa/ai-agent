@@ -4,16 +4,32 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "dashscope.image")
 public record ImageGenerationProperties(
-        String apiKey,
         String model,
         String size,
-        String negativePrompt
+        String negativePrompt,
+        String apiUrl,
+        Boolean watermark,
+        Boolean promptExtend
 ) {
     public String effectiveModel() {
         return model == null || model.isBlank() ? "qwen-image-2.0-pro" : model.trim();
     }
 
     public String effectiveSize() {
-        return size == null || size.isBlank() ? "2048*2048" : size.trim();
+        return size == null || size.isBlank() ? "1024*1024" : size.trim();
+    }
+
+    public String effectiveApiUrl() {
+        return apiUrl == null || apiUrl.isBlank()
+                ? "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
+                : apiUrl.trim();
+    }
+
+    public boolean effectiveWatermark() {
+        return watermark != null && watermark;
+    }
+
+    public boolean effectivePromptExtend() {
+        return promptExtend == null || promptExtend;
     }
 }

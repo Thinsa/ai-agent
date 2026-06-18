@@ -3,23 +3,26 @@
     <div class="header">
       <button class="back-button" type="button" @click="goBack">返回</button>
       <h1 class="title">AI恋爱大师</h1>
-      <div class="chat-id">会话ID: {{ chatId }}</div>
+      <div class="header-actions">
+        <div class="chat-id">会话ID: {{ chatId }}</div>
+        <button
+          class="settings-toggle-button"
+          type="button"
+          :class="{ active: settingsOpen }"
+          :title="settingsOpen ? '关闭设置' : '打开设置'"
+          :aria-label="settingsOpen ? '关闭设置' : '打开设置'"
+          @click="settingsOpen = !settingsOpen"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" />
+            <path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.05.05a2.15 2.15 0 0 1-3.04 3.04l-.05-.05A1.8 1.8 0 0 0 14.74 19a1.8 1.8 0 0 0-1.1 1.65V21a2.15 2.15 0 0 1-4.3 0v-.08A1.8 1.8 0 0 0 8.24 19a1.8 1.8 0 0 0-1.98.36l-.05.05a2.15 2.15 0 0 1-3.04-3.04l.05-.05A1.8 1.8 0 0 0 5 14.74a1.8 1.8 0 0 0-1.65-1.1H3a2.15 2.15 0 0 1 0-4.3h.08A1.8 1.8 0 0 0 5 8.24a1.8 1.8 0 0 0-.36-1.98l-.05-.05a2.15 2.15 0 0 1 3.04-3.04l.05.05A1.8 1.8 0 0 0 9.26 5a1.8 1.8 0 0 0 1.1-1.65V3a2.15 2.15 0 0 1 4.3 0v.08A1.8 1.8 0 0 0 15.76 5a1.8 1.8 0 0 0 1.98-.36l.05-.05a2.15 2.15 0 0 1 3.04 3.04l-.05.05A1.8 1.8 0 0 0 19 9.26a1.8 1.8 0 0 0 1.65 1.1H21a2.15 2.15 0 0 1 0 4.3h-.08A1.8 1.8 0 0 0 19.4 15Z" />
+          </svg>
+          <span>设置</span>
+        </button>
+      </div>
     </div>
 
     <div class="content-wrapper" :class="{ 'settings-open': settingsOpen }">
-      <button
-        class="settings-toggle-button"
-        type="button"
-        :title="settingsOpen ? '关闭设置' : '打开设置'"
-        :aria-label="settingsOpen ? '关闭设置' : '打开设置'"
-        @click="settingsOpen = !settingsOpen"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" />
-          <path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.05.05a2.15 2.15 0 0 1-3.04 3.04l-.05-.05A1.8 1.8 0 0 0 14.74 19a1.8 1.8 0 0 0-1.1 1.65V21a2.15 2.15 0 0 1-4.3 0v-.08A1.8 1.8 0 0 0 8.24 19a1.8 1.8 0 0 0-1.98.36l-.05.05a2.15 2.15 0 0 1-3.04-3.04l.05-.05A1.8 1.8 0 0 0 5 14.74a1.8 1.8 0 0 0-1.65-1.1H3a2.15 2.15 0 0 1 0-4.3h.08A1.8 1.8 0 0 0 5 8.24a1.8 1.8 0 0 0-.36-1.98l-.05-.05a2.15 2.15 0 0 1 3.04-3.04l.05.05A1.8 1.8 0 0 0 9.26 5a1.8 1.8 0 0 0 1.1-1.65V3a2.15 2.15 0 0 1 4.3 0v.08A1.8 1.8 0 0 0 15.76 5a1.8 1.8 0 0 0 1.98-.36l.05-.05a2.15 2.15 0 0 1 3.04 3.04l-.05.05A1.8 1.8 0 0 0 19 9.26a1.8 1.8 0 0 0 1.65 1.1H21a2.15 2.15 0 0 1 0 4.3h-.08A1.8 1.8 0 0 0 19.4 15Z" />
-        </svg>
-      </button>
-
       <AgentSettingsPanel
         v-if="settingsOpen"
         theme="love"
@@ -294,7 +297,7 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 16px 24px;
+  padding: 12px 18px;
   background-color: #ff6b8b;
   color: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -331,9 +334,16 @@ onBeforeUnmount(() => {
 }
 
 .chat-id {
-  justify-self: end;
   font-size: 14px;
   opacity: 0.88;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 12px;
+  min-width: 0;
 }
 
 .content-wrapper {
@@ -342,8 +352,8 @@ onBeforeUnmount(() => {
   flex: 1;
   min-height: 0;
   flex-direction: row;
-  gap: 16px;
-  padding: 16px;
+  gap: 0;
+  padding: 0;
   overflow: hidden;
 }
 
@@ -358,24 +368,31 @@ onBeforeUnmount(() => {
 }
 
 .settings-open .chat-area {
-  flex: 0 0 calc(50% - 8px);
+  flex: 0 0 50%;
 }
 
 .settings-toggle-button {
-  position: absolute;
-  top: 24px;
-  right: 24px;
-  z-index: 20;
-  width: 44px;
-  height: 44px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 88px;
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.96);
-  color: #0f172a;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 14px;
+  font-weight: 700;
   line-height: 1;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.settings-toggle-button:hover,
+.settings-toggle-button.active {
+  border-color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .settings-toggle-button svg {
@@ -403,17 +420,17 @@ onBeforeUnmount(() => {
 
   .content-wrapper {
     flex-direction: column;
-    gap: 12px;
-    padding: 12px;
+    gap: 0;
+    padding: 0;
   }
 
   .settings-open .chat-area {
     flex: 1;
   }
 
-  .settings-toggle-button {
-    top: 18px;
-    right: 18px;
+  .settings-toggle-button span,
+  .chat-id {
+    display: none;
   }
 }
 
@@ -430,12 +447,9 @@ onBeforeUnmount(() => {
     font-size: 16px;
   }
 
-  .chat-id {
-    display: none;
-  }
-
-  .content-wrapper {
-    padding: 8px;
+  .settings-toggle-button {
+    min-width: 44px;
+    min-height: 36px;
   }
 }
 </style>

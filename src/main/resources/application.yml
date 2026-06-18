@@ -21,6 +21,7 @@ spring:
       chat: openai
       embedding: dashscope
     dashscope:
+      api-key: ${DASHSCOPE_API_KEY:}
       embedding:
         enabled: true
     openai:
@@ -78,10 +79,12 @@ search-api:
 
 dashscope:
   image:
-    api-key: ${DASHSCOPE_API_KEY:}
     model: ${DASHSCOPE_IMAGE_MODEL:qwen-image-2.0-pro}
-    size: ${DASHSCOPE_IMAGE_SIZE:2048*2048}
+    size: ${DASHSCOPE_IMAGE_SIZE:1024*1024}
     negative-prompt: ${DASHSCOPE_IMAGE_NEGATIVE_PROMPT:}
+    api-url: ${DASHSCOPE_IMAGE_API_URL:https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation}
+    watermark: ${DASHSCOPE_IMAGE_WATERMARK:false}
+    prompt-extend: ${DASHSCOPE_IMAGE_PROMPT_EXTEND:true}
 
 aliyun:
   oss:

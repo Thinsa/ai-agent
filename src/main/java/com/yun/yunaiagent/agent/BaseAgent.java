@@ -49,7 +49,7 @@ public abstract class BaseAgent {
      * 以 SSE 方式异步执行任务，边执行边把每一步结果推送给客户端。
      */
     public SseEmitter runStream(String userPrompt) {
-        SseEmitter emitter = new SseEmitter(300000L);
+        SseEmitter emitter = createEmitter(300000L);
         CompletableFuture.runAsync(() -> {
             StringBuilder result = new StringBuilder();
             boolean persisted = false;
@@ -70,14 +70,33 @@ public abstract class BaseAgent {
                 emitter.send("[DONE]");
                 emitter.complete();
             } catch (IOException e) {
-                state = AgentState.ERROR;
+                state = isClientDisconnect(e) ? AgentState.FINISHED : AgentState.ERROR;
                 if (!persisted && !result.toString().isBlank()) {
                     afterRun(userPrompt, toAssistantMessage(result.toString().trim()));
                 }
-                emitter.completeWithError(e);
+                if (isClientDisconnect(e)) {
+                    emitter.complete();
+                } else {
+                    emitter.completeWithError(e);
+                }
             }
         });
         return emitter;
+    }
+
+    protected SseEmitter createEmitter(long timeoutMillis) {
+        return new SseEmitter(timeoutMillis);
+    }
+
+    private boolean isClientDisconnect(IOException e) {
+        String message = e.getMessage();
+        if (message == null) {
+            return false;
+        }
+        return message.contains("你的主机中的软件中止了一个已建立的连接")
+                || message.contains("An established connection was aborted")
+                || message.contains("Broken pipe")
+                || message.contains("Connection reset by peer");
     }
 
     /**
