@@ -2,7 +2,7 @@
   <div class="super-agent-container">
     <div class="header">
       <button class="back-button" type="button" @click="goBack">返回</button>
-      <h1 class="title">AI超级智能体</h1>
+      <h1 class="title">极智 Core</h1>
       <div class="header-actions">
         <button
           class="settings-toggle-button"
@@ -49,8 +49,11 @@
         <ChatRoom
           :messages="messages"
           :connection-status="connectionStatus"
+          :stream-paused="streamPaused"
           ai-type="super"
           @send-message="sendMessage"
+          @stop-generation="stopGeneration"
+          @resume-generation="resumeGeneration"
         />
       </div>
     </div>
@@ -67,15 +70,15 @@ import ChatRoom from '../components/ChatRoom.vue'
 import { chatWithManus, chatWithManusMcp, getChatHistory, listChatSessions } from '../api'
 
 useHead({
-  title: 'AI超级智能体 - AI超级智能体应用平台',
+  title: '极智 Core - LinkMind 灵桥',
   meta: [
     {
       name: 'description',
-      content: 'AI超级智能体是AI超级智能体应用平台的全能助手'
+      content: '极智 Core 是 LinkMind 灵桥的全能助手，调用工具、联网搜索、ReAct 推理，解决各类专业问题。'
     },
     {
       name: 'keywords',
-      content: 'AI超级智能体,智能助手,专业问答,AI问答'
+      content: '极智Core,LinkMind,灵桥,AI智能体,工具调用,联网搜索,ReAct推理'
     }
   ]
 })
@@ -88,6 +91,7 @@ const webSearchEnabled = ref(false)
 const mcpEnabled = ref(false)
 const customPrompt = ref('')
 const connectionStatus = ref('disconnected')
+const streamPaused = ref(false)
 const historySessions = ref([])
 const historyLoading = ref(false)
 let eventSource = null
@@ -111,18 +115,40 @@ const addMessage = (content, isUser, extra = {}) => {
   })
 }
 
-const toPageMessage = message => ({
-  content: message.content,
-  isUser: message.role === 'user',
-  type: message.role === 'user' ? 'user-question' : 'ai-answer',
-  time: new Date(message.createdAt).getTime()
-})
+const toPageMessage = message => {
+  let content = message.content
+  if (message.role === 'assistant') {
+    const imageMatch = content?.match(/(?:图片生成成功|图片生成失败)[：:]\s*(.+)/)
+    if (imageMatch) {
+      content = imageMatch[1]
+    }
+  }
+  return {
+    content,
+    isUser: message.role === 'user',
+    type: message.role === 'user' ? 'user-question' : 'ai-answer',
+    time: new Date(message.createdAt).getTime()
+  }
+}
 
 const closeStream = () => {
   if (eventSource) {
     eventSource.close()
     eventSource = null
   }
+}
+
+const stopGeneration = () => {
+  closeStream()
+  connectionStatus.value = 'disconnected'
+  streamPaused.value = true
+}
+
+const resumeGeneration = () => {
+  streamPaused.value = false
+  const useMcp = mcpEnabled.value
+  closeStream()
+  runStreamChat('请继续完成上面的回答', useMcp)
 }
 
 const loadSessions = async () => {
@@ -150,9 +176,10 @@ const loadHistory = async targetChatId => {
 const startNewSession = () => {
   closeStream()
   connectionStatus.value = 'disconnected'
+  streamPaused.value = false
   chatId.value = generateChatId()
   messages.value = []
-  addMessage('你好，我是AI超级智能体。我可以解答各类问题，提供专业建议，也可以在开启能力后使用联网搜索和 MCP 服务。', false)
+  addMessage('你好，我是极智 Core，LinkMind 灵桥的全能助手。我可以调用工具、联网搜索、生成图片，解决各类复杂问题。', false)
 }
 
 const buildPrompt = message => {
@@ -181,6 +208,13 @@ const runStreamChat = (message, useMcp) => {
     if (data === '[DONE]') {
       connectionStatus.value = 'disconnected'
       closeStream()
+      const msg = messages.value[aiMessageIndex]
+      if (msg) {
+        const imageMatch = msg.content?.match(/(?:图片生成成功|图片生成失败)[：:]\s*(.+)/)
+        if (imageMatch) {
+          msg.content = imageMatch[1]
+        }
+      }
       loadSessions()
     }
   }
@@ -209,6 +243,7 @@ const runStreamChat = (message, useMcp) => {
 
 const sendMessage = message => {
   const useMcp = mcpEnabled.value
+  streamPaused.value = false
   addMessage(message, true, { modeLabel: activeModeLabel(true) })
   closeStream()
   runStreamChat(buildPrompt(message), useMcp)
@@ -304,7 +339,6 @@ onBeforeUnmount(() => {
   flex: 1;
   min-width: 0;
   min-height: 0;
-  height: 100%;
   overflow: hidden;
 }
 

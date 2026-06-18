@@ -2,10 +2,10 @@
   <main class="login-page">
     <section class="login-shell">
       <div class="brand-panel">
-        <div class="brand-mark">AI</div>
-        <p class="eyebrow">Yu AI Agent</p>
-        <h1>登录智能体应用平台</h1>
-        <p class="brand-copy">进入后可体验 AI 恋爱大师、超级智能体，并管理你的用户资料。</p>
+        <div class="brand-mark">LM</div>
+        <p class="eyebrow">LinkMind 灵桥</p>
+        <h1>登录灵桥智能体平台</h1>
+        <p class="brand-copy">进入后可体验知心 Soul（情感伴侣）与极智 Core（全能助手），并管理你的用户资料。</p>
         <div class="signal-list" aria-label="登录页功能说明">
           <span>账号登录</span>
           <span>资料管理</span>

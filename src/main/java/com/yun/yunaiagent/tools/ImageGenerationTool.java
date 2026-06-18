@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -20,6 +21,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,8 @@ import java.util.UUID;
 @EnableConfigurationProperties(ImageGenerationProperties.class)
 public class ImageGenerationTool implements AgentTool {
 
+    private static final int MAX_IMAGES = 3;
+
     private final ImageGenerationProperties properties;
 
     private final DashScopeImageClient imageClient;
@@ -36,6 +40,10 @@ public class ImageGenerationTool implements AgentTool {
     private final ImageDownloader imageDownloader;
 
     private final ObjectUploader objectUploader;
+
+    private volatile boolean alreadyGenerated;
+
+    private volatile String lastPrompt;
 
     @Autowired
     public ImageGenerationTool(
@@ -69,19 +77,46 @@ public class ImageGenerationTool implements AgentTool {
         return "根据提示词生成图片，并上传到 OSS 返回可预览 URL";
     }
 
-    @Tool(description = "根据提示词生成图片，返回可公开访问的图片 URL")
-    public String generateImage(String prompt) {
+    @Tool(description = "根据提示词生成图片，返回可公开访问的图片 URL。" +
+            "每次调用默认生成 1 张图片。仅当用户明确说出具体数量(例如: 生成2张、生成三张)时才传入 count 大于 1，最大 3 张。")
+    public String generateImage(String prompt,
+            @ToolParam(description = "生成数量，默认 1，最大 3。仅当用户明确要求多张时才传入大于 1 的值") Integer count) {
         if (prompt == null || prompt.isBlank()) {
             return "图片生成失败：提示词不能为空";
         }
+
+        // 防止在同一次对话中重复调用：新 prompt 重置计数器，相同 prompt 第二次调用直接拒绝
+        String trimmedPrompt = prompt.trim();
+        if (trimmedPrompt.equals(lastPrompt)) {
+            if (alreadyGenerated) {
+                return "图片已生成，请勿重复调用。请调用 doTerminate 结束任务。";
+            }
+        } else {
+            lastPrompt = trimmedPrompt;
+            alreadyGenerated = false;
+        }
+        alreadyGenerated = true;
+
+        int n = count == null || count < 1 ? 1 : Math.min(count, MAX_IMAGES);
         try {
-            String temporaryUrl = imageClient.generate(prompt.trim());
-            if (temporaryUrl == null || temporaryUrl.isBlank()) {
+            List<String> temporaryUrls = imageClient.generate(prompt.trim(), n);
+            if (temporaryUrls.isEmpty()) {
                 return "图片生成失败：模型未返回图片 URL";
             }
-            DownloadedImage image = imageDownloader.download(temporaryUrl);
-            String publicUrl = objectUploader.upload(buildObjectKey(image.contentType()), image.bytes(), image.contentType());
-            return "图片生成成功：" + publicUrl;
+            List<String> publicUrls = new ArrayList<>();
+            for (String temporaryUrl : temporaryUrls) {
+                if (temporaryUrl == null || temporaryUrl.isBlank()) {
+                    continue;
+                }
+                DownloadedImage image = imageDownloader.download(temporaryUrl);
+                String publicUrl = objectUploader.upload(
+                        buildObjectKey(image.contentType()), image.bytes(), image.contentType());
+                publicUrls.add(publicUrl);
+            }
+            if (publicUrls.isEmpty()) {
+                return "图片生成失败：模型未返回图片 URL";
+            }
+            return "图片生成成功：" + String.join("\n", publicUrls);
         } catch (Exception e) {
             return "图片生成失败：" + e.getMessage();
         }
@@ -97,10 +132,6 @@ public class ImageGenerationTool implements AgentTool {
         return "generated-images/" + LocalDate.now() + "/" + UUID.randomUUID() + extension;
     }
 
-    /**
-     * 创建带超时配置的 RestClient，用于 DashScope API 调用和图片下载。
-     * 连接超时 10 秒，读取超时 120 秒（图片生成接口较慢）。
-     */
     private static RestClient createRestClient() {
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
@@ -112,7 +143,7 @@ public class ImageGenerationTool implements AgentTool {
 
     @FunctionalInterface
     interface DashScopeImageClient {
-        String generate(String prompt) throws Exception;
+        List<String> generate(String prompt, int n) throws Exception;
     }
 
     @FunctionalInterface
@@ -149,12 +180,11 @@ public class ImageGenerationTool implements AgentTool {
         }
 
         @Override
-        public String generate(String prompt) throws Exception {
+        public List<String> generate(String prompt, int n) throws Exception {
             if (apiKey == null || apiKey.isBlank()) {
                 throw new IllegalStateException("未配置 spring.ai.dashscope.api-key");
             }
 
-            // 构建 DashScope 多模态生成 API 请求体
             Map<String, Object> userContent = new LinkedHashMap<>();
             userContent.put("text", prompt);
 
@@ -166,7 +196,7 @@ public class ImageGenerationTool implements AgentTool {
             input.put("messages", List.of(userMessage));
 
             Map<String, Object> parameters = new LinkedHashMap<>();
-            parameters.put("n", 1);
+            parameters.put("n", n);
             parameters.put("size", properties.effectiveSize());
             parameters.put("watermark", properties.effectiveWatermark());
             parameters.put("prompt_extend", properties.effectivePromptExtend());
@@ -180,7 +210,7 @@ public class ImageGenerationTool implements AgentTool {
             payload.put("parameters", parameters);
 
             String apiUrl = properties.effectiveApiUrl();
-            log.info("Calling DashScope image generation API: {} with model: {}", apiUrl, properties.effectiveModel());
+            log.info("Calling DashScope image generation API: {} model: {} n: {}", apiUrl, properties.effectiveModel(), n);
 
             String response = restClient.post()
                     .uri(apiUrl)
@@ -197,42 +227,52 @@ public class ImageGenerationTool implements AgentTool {
                     .body(String.class);
 
             log.debug("DashScope API response: {}", response);
-            return extractImageUrl(response);
+            return extractImageUrls(response);
         }
 
-        private String extractImageUrl(String response) throws Exception {
+        private List<String> extractImageUrls(String response) throws Exception {
             JsonNode root = objectMapper.readTree(response == null ? "{}" : response);
+            List<String> urls = new ArrayList<>();
 
-            // DashScope 多模态生成响应: output.choices[0].message.content[0].image
+            // DashScope 多模态生成响应: output.choices[0].message.content[*].image
             JsonNode choices = root.path("output").path("choices");
             if (choices.isArray() && !choices.isEmpty()) {
                 JsonNode content = choices.get(0).path("message").path("content");
-                if (content.isArray() && !content.isEmpty()) {
-                    String url = content.get(0).path("image").asText("");
-                    if (!url.isBlank()) {
-                        log.info("Extracted image URL from DashScope response");
-                        return url;
+                if (content.isArray()) {
+                    for (JsonNode item : content) {
+                        String url = item.path("image").asText("");
+                        if (!url.isBlank()) {
+                            urls.add(url);
+                        }
                     }
                 }
             }
 
-            // 兼容旧版 text2image 响应: output.results[0].url
-            JsonNode results = root.path("output").path("results");
-            if (results.isArray() && !results.isEmpty()) {
-                String url = results.get(0).path("url").asText("");
-                if (!url.isBlank()) {
-                    return url;
+            // 兼容旧版 text2image 响应: output.results[*].url
+            if (urls.isEmpty()) {
+                JsonNode results = root.path("output").path("results");
+                if (results.isArray()) {
+                    for (JsonNode item : results) {
+                        String url = item.path("url").asText("");
+                        if (!url.isBlank()) {
+                            urls.add(url);
+                        }
+                    }
                 }
             }
 
-            // 错误信息
+            if (!urls.isEmpty()) {
+                log.info("Extracted {} image URL(s) from DashScope response", urls.size());
+                return urls;
+            }
+
             String code = root.path("code").asText("");
             String message = root.path("message").asText("");
             if (!code.isBlank() || !message.isBlank()) {
                 throw new IllegalStateException(code.isBlank() ? message : code + ": " + message);
             }
             log.warn("DashScope API returned unexpected response format: {}", response);
-            return "";
+            return urls;
         }
     }
 

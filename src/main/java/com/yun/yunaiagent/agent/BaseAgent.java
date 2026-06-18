@@ -11,9 +11,9 @@ import java.util.concurrent.CompletableFuture;
 public abstract class BaseAgent {
 
     /**
-     * 智能体当前状态，用于控制执行循环是否继续。
+     * 智能体当前状态，volatile 确保 runStream() 异步线程的修改对调用方可见。
      */
-    protected AgentState state = AgentState.IDLE;
+    protected volatile AgentState state = AgentState.IDLE;
 
     /**
      * 最大执行步数，防止智能体陷入无限循环。
@@ -21,9 +21,14 @@ public abstract class BaseAgent {
     protected int maxSteps = 20;
 
     /**
-     * 简单的对话历史容器，后续可替换为更完整的 memory/session 机制。
+     * 简单对话历史容器，后续可替换为更完整的 memory/session 机制。
      */
     protected final List<String> messageList = new ArrayList<>();
+
+    /**
+     * 当前正在执行的异步任务，用于在异常或完成时取消，避免线程泄漏。
+     */
+    private volatile CompletableFuture<Void> currentTask;
 
     /**
      * 同步执行智能体任务，每一轮由子类实现具体 step 逻辑。
@@ -50,7 +55,7 @@ public abstract class BaseAgent {
      */
     public SseEmitter runStream(String userPrompt) {
         SseEmitter emitter = createEmitter(300000L);
-        CompletableFuture.runAsync(() -> {
+        CompletableFuture<Void> task = CompletableFuture.runAsync(() -> {
             StringBuilder result = new StringBuilder();
             boolean persisted = false;
             try {
@@ -60,15 +65,27 @@ public abstract class BaseAgent {
                 for (int i = 1; i <= maxSteps && state == AgentState.RUNNING; i++) {
                     String stepResult = step(userPrompt, i);
                     result.append(stepResult).append(System.lineSeparator());
-                    emitter.send(toAssistantMessage(stepResult));
+                    try {
+                        emitter.send(toAssistantMessage(stepResult));
+                    } catch (IOException sendError) {
+                        if (isClientDisconnect(sendError)) {
+                            state = AgentState.FINISHED;
+                            break;
+                        }
+                        throw sendError;
+                    }
                 }
                 if (state == AgentState.RUNNING) {
                     state = AgentState.FINISHED;
                 }
                 afterRun(userPrompt, toAssistantMessage(result.toString().trim()));
                 persisted = true;
-                emitter.send("[DONE]");
-                emitter.complete();
+                try {
+                    emitter.send("[DONE]");
+                    emitter.complete();
+                } catch (IOException ignored) {
+                    emitter.complete();
+                }
             } catch (IOException e) {
                 state = isClientDisconnect(e) ? AgentState.FINISHED : AgentState.ERROR;
                 if (!persisted && !result.toString().isBlank()) {
@@ -79,8 +96,11 @@ public abstract class BaseAgent {
                 } else {
                     emitter.completeWithError(e);
                 }
+            } finally {
+                currentTask = null;
             }
         });
+        currentTask = task;
         return emitter;
     }
 

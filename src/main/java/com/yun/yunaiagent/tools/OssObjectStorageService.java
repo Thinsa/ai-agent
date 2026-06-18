@@ -2,6 +2,7 @@ package com.yun.yunaiagent.tools;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
+import com.yun.yunaiagent.common.ValidationUtils;
 import com.aliyun.oss.model.ObjectMetadata;
 import com.yun.yunaiagent.user.AliyunOssProperties;
 import org.springframework.beans.factory.DisposableBean;
@@ -59,14 +60,14 @@ public class OssObjectStorageService implements DisposableBean {
     }
 
     private void validateConfig() {
-        if (isBlank(properties.endpoint()) || isBlank(properties.bucket())
-                || isBlank(properties.accessKeyId()) || isBlank(properties.accessKeySecret())) {
+        if (ValidationUtils.isBlank(properties.endpoint()) || ValidationUtils.isBlank(properties.bucket())
+                || ValidationUtils.isBlank(properties.accessKeyId()) || ValidationUtils.isBlank(properties.accessKeySecret())) {
             throw new IllegalStateException("Aliyun OSS is not configured");
         }
     }
 
     private String publicBaseUrl() {
-        if (!isBlank(properties.publicBaseUrl())) {
+        if (!ValidationUtils.isBlank(properties.publicBaseUrl())) {
             return trimRightSlash(properties.publicBaseUrl());
         }
         String endpoint = properties.endpoint()
@@ -77,9 +78,5 @@ public class OssObjectStorageService implements DisposableBean {
 
     private String trimRightSlash(String value) {
         return value.replaceAll("/+$", "");
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
     }
 }

@@ -14,8 +14,8 @@
     <groupId>com.yun</groupId>
     <artifactId>yun-ai-agent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>yun-ai-agent</name>
-    <description>Yun AI Agent backend scaffold</description>
+    <name>link-mind</name>
+    <description>LinkMind 灵桥 — 连接智慧，点亮灵感</description>
 
     <properties>
         <java.version>21</java.version>

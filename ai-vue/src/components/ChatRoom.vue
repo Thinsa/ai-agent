@@ -1,5 +1,6 @@
 ﻿<template>
   <div class="chat-container">
+    <div class="chat-bg" :style="bgStyle"></div>
     <div class="chat-messages" ref="messagesContainer">
       <div v-for="(msg, index) in messages" :key="index" class="message-wrapper">
         <div v-if="!msg.isUser" class="message ai-message" :class="[msg.type]">
@@ -9,13 +10,39 @@
           <div class="message-bubble">
             <div v-if="msg.modeLabel" class="message-mode">{{ msg.modeLabel }}</div>
             <div class="message-content">
-              {{ msg.content }}
+              {{ getStoryText(msg.content) }}
               <span
                 v-if="connectionStatus === 'connecting' && index === messages.length - 1"
                 class="typing-indicator"
               >
-                think
+                think...
               </span>
+            </div>
+            <!-- 选项按钮：仅最后一条 AI 消息且连接空闲时显示 -->
+            <div
+              v-if="getStoryChoices(msg.content).length && connectionStatus !== 'connecting' && index === messages.length - 1"
+              class="story-choices"
+            >
+              <button
+                v-for="choice in getStoryChoices(msg.content)"
+                :key="choice.number"
+                type="button"
+                class="choice-btn"
+                :class="{ 'custom-choice': choice.number === '5' }"
+                @click="selectChoice(choice.number)"
+              >
+                {{ choice.number }}. {{ choice.label }}
+              </button>
+            </div>
+            <!-- 结局标记 -->
+            <div
+              v-if="isStoryEnding(msg.content) && connectionStatus !== 'connecting' && index === messages.length - 1"
+              class="story-ending"
+            >
+              <span class="ending-badge">📖 故事完结</span>
+              <button type="button" class="restart-btn" @click="$emit('send-message', '开始')">
+                开始新故事
+              </button>
             </div>
             <div v-if="extractImageUrls(msg.content).length" class="image-grid">
               <a
@@ -29,7 +56,25 @@
                 <img :src="url" alt="preview" class="image-preview">
               </a>
             </div>
-            <div class="message-time">{{ formatTime(msg.time) }}</div>
+            <div class="message-footer">
+              <div class="message-time">{{ formatTime(msg.time) }}</div>
+              <button
+                v-if="connectionStatus === 'connecting' && !streamPaused && index === messages.length - 1"
+                type="button"
+                class="stream-control-btn stop-btn"
+                @click.stop="$emit('stop-generation')"
+              >
+                ⏸ 停止
+              </button>
+              <button
+                v-if="streamPaused && index === messages.length - 1"
+                type="button"
+                class="stream-control-btn resume-btn"
+                @click.stop="$emit('resume-generation')"
+              >
+                ▶ 继续
+              </button>
+            </div>
           </div>
         </div>
 
@@ -69,8 +114,9 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import AiAvatarFallback from './AiAvatarFallback.vue'
+import { getBackground } from '../stores/bgStore'
 
 const props = defineProps({
   messages: {
@@ -84,10 +130,30 @@ const props = defineProps({
   aiType: {
     type: String,
     default: 'default'
+  },
+  streamPaused: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['send-message'])
+const emit = defineEmits(['send-message', 'stop-generation', 'resume-generation'])
+
+const agentKey = computed(() => {
+  return props.aiType === 'spark' ? 'chat' : props.aiType
+})
+
+const bgStyle = computed(() => {
+  const bg = getBackground(agentKey.value)
+  if (!bg.url) return { display: 'none' }
+  return {
+    backgroundImage: `url(${bg.url})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    opacity: bg.opacity || 0.15
+  }
+})
 
 const inputMessage = ref('')
 const messagesContainer = ref(null)
@@ -97,6 +163,55 @@ const extractImageUrls = (content) => {
   const imageUrlPattern = /https?:\/\/\S+\.(?:png|jpe?g|webp|gif)(?:\?\S*)?/gi
   const matches = content.match(imageUrlPattern) || []
   return [...new Set(matches)]
+}
+
+const extractStoryMeta = (content) => {
+  if (!content) return { text: '', choices: [], isEnding: false }
+  const choiceIdx = content.indexOf('【选项】')
+  const endingIdx = content.indexOf('【结局】')
+  const isEnding = endingIdx >= 0
+
+  // 分离正文和选项
+  let text = content
+  let choices = []
+
+  // 处理【结局】标记：移除标记本身，保留结局文字
+  if (isEnding) {
+    text = content.replace('【结局】', '').trim()
+    return { text, choices: [], isEnding: true }
+  }
+
+  // 处理【选项】标记：提取正文和选项列表
+  if (choiceIdx >= 0) {
+    text = content.substring(0, choiceIdx).trim()
+    const choicesSection = content.substring(choiceIdx + '【选项】'.length)
+    // 解析编号选项：匹配 "1. 选项描述" 格式
+    const choiceLines = choicesSection.split('\n')
+    for (const line of choiceLines) {
+      const match = line.match(/^(\d+)\.\s*(.+)/)
+      if (match) {
+        choices.push({ number: match[1], label: match[2].trim() })
+      }
+    }
+  }
+
+  return { text, choices, isEnding }
+}
+
+const getStoryText = (content) => {
+  return extractStoryMeta(content).text
+}
+
+const getStoryChoices = (content) => {
+  return extractStoryMeta(content).choices
+}
+
+const isStoryEnding = (content) => {
+  return extractStoryMeta(content).isEnding
+}
+
+const selectChoice = (number) => {
+  emit('send-message', number)
 }
 
 const sendMessage = () => {
@@ -138,10 +253,17 @@ onMounted(() => {
   flex-direction: column;
   flex: 1;
   width: 100%;
-  height: 100%;
   min-height: 0;
   background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
   overflow: hidden;
+  position: relative;
+}
+
+.chat-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .chat-messages {
@@ -151,6 +273,8 @@ onMounted(() => {
   padding: 16px;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
 }
 
 .message-wrapper {
@@ -271,11 +395,54 @@ onMounted(() => {
   background: #ffffff;
 }
 
+.message-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .message-time {
   font-size: 12px;
   opacity: 0.7;
-  margin-top: 4px;
-  text-align: right;
+}
+
+.stream-control-btn {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.7);
+  color: #475569;
+  white-space: nowrap;
+}
+
+.stream-control-btn:hover {
+  border-color: rgba(148, 163, 184, 0.7);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.stop-btn {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.stop-btn:hover {
+  background: #fef2f2;
+  border-color: #dc2626;
+}
+
+.resume-btn {
+  color: #059669;
+  border-color: rgba(5, 150, 105, 0.3);
+}
+
+.resume-btn:hover {
+  background: #ecfdf5;
+  border-color: #059669;
 }
 
 .chat-input-container {
@@ -283,6 +450,7 @@ onMounted(() => {
   background-color: #ffffff;
   border-top: 1px solid #e0e0e0;
   z-index: 100;
+  position: relative;
   height: 72px;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
 }
@@ -420,6 +588,79 @@ onMounted(() => {
   .chat-input-container {
     height: 64px;
   }
+}
+
+.story-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.choice-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  border-radius: 10px;
+  background: rgba(124, 58, 237, 0.06);
+  color: #5b21b6;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.choice-btn:hover {
+  background: rgba(124, 58, 237, 0.14);
+  border-color: rgba(124, 58, 237, 0.5);
+  transform: translateX(4px);
+}
+
+.choice-btn.custom-choice {
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(148, 163, 184, 0.06);
+  color: #64748b;
+  font-style: italic;
+}
+
+.choice-btn.custom-choice:hover {
+  background: rgba(148, 163, 184, 0.14);
+  border-color: rgba(148, 163, 184, 0.5);
+}
+
+.story-ending {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(167, 139, 250, 0.05));
+  border-radius: 10px;
+  border: 1px solid rgba(124, 58, 237, 0.15);
+}
+
+.ending-badge {
+  font-size: 14px;
+  font-weight: 700;
+  color: #7c3aed;
+}
+
+.restart-btn {
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.restart-btn:hover {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  transform: translateY(-1px);
 }
 </style>
 

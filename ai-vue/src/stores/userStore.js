@@ -1,4 +1,5 @@
 import { computed, reactive } from 'vue'
+import { resetBackgrounds } from './bgStore'
 import {
   clearStoredAuth,
   getStoredToken,
@@ -58,6 +59,7 @@ const normalizeUser = (user) => {
 
 const clearState = () => {
   clearStoredAuth()
+  resetBackgrounds()
   state.token = null
   state.tokenExpiresAt = 0
   state.user = null

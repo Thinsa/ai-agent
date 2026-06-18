@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -86,12 +87,12 @@ class AgentToolsTest {
     void imageGenerationToolReturnsClearMessageWhenDashScopeKeyIsMissing() {
         ImageGenerationTool tool = new ImageGenerationTool(
                 new ImageGenerationProperties("qwen-image-2.0-pro", "2048*2048", "", "", null, null),
-                prompt -> { throw new IllegalStateException("未配置 spring.ai.dashscope.api-key"); },
+                (prompt, n) -> { throw new IllegalStateException("未配置 spring.ai.dashscope.api-key"); },
                 url -> new ImageGenerationTool.DownloadedImage(new byte[]{1}, "image/png"),
                 (key, bytes, contentType) -> "https://oss.example/generated.png"
         );
 
-        String result = tool.generateImage("cat poster");
+        String result = tool.generateImage("cat poster", null);
 
         assertThat(result).contains("图片生成失败：未配置 spring.ai.dashscope.api-key");
     }
@@ -100,7 +101,7 @@ class AgentToolsTest {
     void imageGenerationToolUploadsGeneratedImageToOss() {
         ImageGenerationTool tool = new ImageGenerationTool(
                 new ImageGenerationProperties("qwen-image-2.0-pro", "2048*2048", "", "", null, null),
-                prompt -> "https://dashscope.example/temp.png",
+                (prompt, n) -> List.of("https://dashscope.example/temp.png"),
                 url -> new ImageGenerationTool.DownloadedImage(new byte[]{1, 2, 3}, "image/png"),
                 (key, bytes, contentType) -> {
                     assertThat(key).startsWith("generated-images/");
@@ -110,7 +111,7 @@ class AgentToolsTest {
                 }
         );
 
-        String result = tool.generateImage("cat poster");
+        String result = tool.generateImage("cat poster", null);
 
         assertThat(result)
                 .contains("图片生成成功")
@@ -129,7 +130,7 @@ class AgentToolsTest {
                 .run(context -> {
                     ImageGenerationTool tool = context.getBean(ImageGenerationTool.class);
 
-                    String result = tool.generateImage("cat poster");
+                    String result = tool.generateImage("cat poster", null);
 
                     assertThat(result)
                             .contains("图片生成成功")
@@ -169,14 +170,14 @@ class AgentToolsTest {
     void imageGenerationToolReturnsClearMessageWhenPromptIsEmpty() {
         ImageGenerationTool tool = new ImageGenerationTool(
                 new ImageGenerationProperties(null, null, null, null, null, null),
-                prompt -> "https://dashscope.example/temp.png",
+                (prompt, n) -> List.of("https://dashscope.example/temp.png"),
                 url -> new ImageGenerationTool.DownloadedImage(new byte[]{1}, "image/png"),
                 (key, bytes, contentType) -> "https://oss.example/generated.png"
         );
 
-        assertThat(tool.generateImage(""))
+        assertThat(tool.generateImage("", null))
                 .contains("图片生成失败：提示词不能为空");
-        assertThat(tool.generateImage((String) null))
+        assertThat(tool.generateImage(null, null))
                 .contains("图片生成失败：提示词不能为空");
     }
 
@@ -184,12 +185,12 @@ class AgentToolsTest {
     void imageGenerationToolReturnsErrorMessageOnApiFailure() {
         ImageGenerationTool tool = new ImageGenerationTool(
                 new ImageGenerationProperties(null, null, null, null, null, null),
-                prompt -> { throw new IllegalStateException("model rate limited"); },
+                (prompt, n) -> { throw new IllegalStateException("model rate limited"); },
                 url -> new ImageGenerationTool.DownloadedImage(new byte[]{1}, "image/png"),
                 (key, bytes, contentType) -> "https://oss.example/generated.png"
         );
 
-        String result = tool.generateImage("cat poster");
+        String result = tool.generateImage("cat poster", null);
 
         assertThat(result)
                 .contains("图片生成失败")
@@ -200,12 +201,12 @@ class AgentToolsTest {
     void imageGenerationToolReturnsErrorMessageOnDownloadFailure() {
         ImageGenerationTool tool = new ImageGenerationTool(
                 new ImageGenerationProperties(null, null, null, null, null, null),
-                prompt -> "https://dashscope.example/temp.png",
+                (prompt, n) -> List.of("https://dashscope.example/temp.png"),
                 url -> { throw new IllegalStateException("connection timeout"); },
                 (key, bytes, contentType) -> "https://oss.example/generated.png"
         );
 
-        String result = tool.generateImage("cat poster");
+        String result = tool.generateImage("cat poster", null);
 
         assertThat(result)
                 .contains("图片生成失败")
@@ -216,12 +217,12 @@ class AgentToolsTest {
     void imageGenerationToolReturnsErrorMessageOnUploadFailure() {
         ImageGenerationTool tool = new ImageGenerationTool(
                 new ImageGenerationProperties(null, null, null, null, null, null),
-                prompt -> "https://dashscope.example/temp.png",
+                (prompt, n) -> List.of("https://dashscope.example/temp.png"),
                 url -> new ImageGenerationTool.DownloadedImage(new byte[]{1, 2, 3}, "image/png"),
                 (key, bytes, contentType) -> { throw new IllegalStateException("OSS bucket not found"); }
         );
 
-        String result = tool.generateImage("cat poster");
+        String result = tool.generateImage("cat poster", null);
 
         assertThat(result)
                 .contains("图片生成失败")
@@ -232,7 +233,7 @@ class AgentToolsTest {
     void imageGenerationToolUsesJpegExtensionForJpegContentType() {
         ImageGenerationTool tool = new ImageGenerationTool(
                 new ImageGenerationProperties(null, null, null, null, null, null),
-                prompt -> "https://dashscope.example/temp.jpg",
+                (prompt, n) -> List.of("https://dashscope.example/temp.jpg"),
                 url -> new ImageGenerationTool.DownloadedImage(new byte[]{1, 2, 3}, "image/jpeg"),
                 (key, bytes, contentType) -> {
                     assertThat(contentType).isEqualTo("image/jpeg");
@@ -242,7 +243,7 @@ class AgentToolsTest {
                 }
         );
 
-        String result = tool.generateImage("cat poster");
+        String result = tool.generateImage("cat poster", null);
 
         assertThat(result)
                 .contains("图片生成成功")
@@ -253,7 +254,7 @@ class AgentToolsTest {
     void imageGenerationToolUsesWebpExtensionForWebpContentType() {
         ImageGenerationTool tool = new ImageGenerationTool(
                 new ImageGenerationProperties(null, null, null, null, null, null),
-                prompt -> "https://dashscope.example/temp.webp",
+                (prompt, n) -> List.of("https://dashscope.example/temp.webp"),
                 url -> new ImageGenerationTool.DownloadedImage(new byte[]{1, 2, 3}, "image/webp"),
                 (key, bytes, contentType) -> {
                     assertThat(contentType).isEqualTo("image/webp");
@@ -262,7 +263,7 @@ class AgentToolsTest {
                 }
         );
 
-        String result = tool.generateImage("cat poster");
+        String result = tool.generateImage("cat poster", null);
 
         assertThat(result).contains("图片生成成功");
     }
@@ -279,9 +280,9 @@ class AgentToolsTest {
         ) {
             return new ImageGenerationTool(
                     properties,
-                    prompt -> {
+                    (prompt, n) -> {
                         assertThat(apiKey).isEqualTo("yml-dashscope-key");
-                        return "https://dashscope.example/temp.png";
+                        return List.of("https://dashscope.example/temp.png");
                     },
                     url -> new ImageGenerationTool.DownloadedImage(new byte[]{1, 2, 3}, "image/png"),
                     (key, bytes, contentType) -> "https://oss.example/generated.png"

@@ -2,7 +2,7 @@
   <div class="love-master-container">
     <div class="header">
       <button class="back-button" type="button" @click="goBack">返回</button>
-      <h1 class="title">AI恋爱大师</h1>
+      <h1 class="title">知心 Soul</h1>
       <div class="header-actions">
         <div class="chat-id">会话ID: {{ chatId }}</div>
         <button
@@ -53,8 +53,11 @@
         <ChatRoom
           :messages="messages"
           :connection-status="connectionStatus"
+          :stream-paused="streamPaused"
           ai-type="love"
           @send-message="sendMessage"
+          @stop-generation="stopGeneration"
+          @resume-generation="resumeGeneration"
         />
       </div>
     </div>
@@ -71,15 +74,15 @@ import ChatRoom from '../components/ChatRoom.vue'
 import { chatWithLoveApp, chatWithLoveAppMcp, chatWithLoveAppRag, getChatHistory, listChatSessions } from '../api'
 
 useHead({
-  title: 'AI恋爱大师 - AI超级智能体应用平台',
+  title: '知心 Soul - LinkMind 灵桥',
   meta: [
     {
       name: 'description',
-      content: 'AI恋爱大师是AI超级智能体应用平台的专业情感顾问'
+      content: '知心 Soul 是 LinkMind 灵桥的情感伴侣，懂你心事，陪你聊天，解答各种情感困惑。'
     },
     {
       name: 'keywords',
-      content: 'AI恋爱大师,情感顾问,恋爱咨询,AI聊天'
+      content: '知心Soul,LinkMind,灵桥,情感伴侣,恋爱咨询,AI聊天,共情倾听'
     }
   ]
 })
@@ -93,6 +96,7 @@ const mcpEnabled = ref(false)
 const knowledgeEnabled = ref(false)
 const customPrompt = ref('')
 const connectionStatus = ref('disconnected')
+const streamPaused = ref(false)
 const historySessions = ref([])
 const historyLoading = ref(false)
 let eventSource = null
@@ -118,16 +122,43 @@ const addMessage = (content, isUser, extra = {}) => {
   })
 }
 
-const toPageMessage = message => ({
-  content: message.content,
-  isUser: message.role === 'user',
-  time: new Date(message.createdAt).getTime()
-})
+const toPageMessage = message => {
+  let content = message.content
+  if (message.role === 'assistant') {
+    const imageMatch = content?.match(/(?:图片生成成功|图片生成失败)[：:]\s*(.+)/)
+    if (imageMatch) {
+      content = imageMatch[1]
+    }
+  }
+  return {
+    content,
+    isUser: message.role === 'user',
+    time: new Date(message.createdAt).getTime()
+  }
+}
 
 const closeStream = () => {
   if (eventSource) {
     eventSource.close()
     eventSource = null
+  }
+}
+
+const stopGeneration = () => {
+  closeStream()
+  connectionStatus.value = 'disconnected'
+  streamPaused.value = true
+}
+
+const resumeGeneration = () => {
+  streamPaused.value = false
+  closeStream()
+  if (mcpEnabled.value) {
+    runMcpChat('请继续完成上面的回答')
+  } else if (knowledgeEnabled.value) {
+    runRagChat('请继续完成上面的回答')
+  } else {
+    runStandardChat('请继续完成上面的回答')
   }
 }
 
@@ -156,9 +187,10 @@ const loadHistory = async targetChatId => {
 const startNewSession = () => {
   closeStream()
   connectionStatus.value = 'disconnected'
+  streamPaused.value = false
   chatId.value = generateChatId()
   messages.value = []
-  addMessage('欢迎来到AI恋爱大师，请告诉我你的恋爱问题，我会尽力给予帮助和建议。', false)
+  addMessage('你好，我是知心 Soul，LinkMind 灵桥的情感伴侣。请告诉我你的心事，我会温柔倾听，给你贴心的建议。', false)
 }
 
 const updateMcpEnabled = enabled => {
@@ -203,6 +235,13 @@ const runStandardChat = message => {
     if (data === '[DONE]') {
       connectionStatus.value = 'disconnected'
       closeStream()
+      const msg = messages.value[aiMessageIndex]
+      if (msg) {
+        const imageMatch = msg.content?.match(/(?:图片生成成功|图片生成失败)[：:]\s*(.+)/)
+        if (imageMatch) {
+          msg.content = imageMatch[1]
+        }
+      }
       loadSessions()
     }
   }
@@ -253,6 +292,7 @@ const runRagChat = async message => {
 }
 
 const sendMessage = async message => {
+  streamPaused.value = false
   addMessage(message, true, { modeLabel: activeModeLabel(true) })
   closeStream()
 
@@ -363,7 +403,6 @@ onBeforeUnmount(() => {
   flex: 1;
   min-width: 0;
   min-height: 0;
-  height: 100%;
   overflow: hidden;
 }
 

@@ -1,5 +1,6 @@
 package com.yun.yunaiagent.user;
 
+import com.yun.yunaiagent.common.ValidationUtils;
 import com.yun.yunaiagent.tools.OssObjectStorageService;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.HttpStatus;
@@ -58,7 +59,7 @@ public class AliyunOssAvatarStorageService implements AvatarStorageService {
 
     private String buildObjectKey(String username, String originalFilename) {
         String extension = extensionOf(originalFilename);
-        String avatarDir = isBlank(properties.avatarDir()) ? "avatars" : trimSlashes(properties.avatarDir());
+        String avatarDir = ValidationUtils.isBlank(properties.avatarDir()) ? "avatars" : trimSlashes(properties.avatarDir());
         String safeUsername = username.replaceAll("[^a-zA-Z0-9._-]", "_");
         return avatarDir + "/" + safeUsername + "/" + UUID.randomUUID() + extension;
     }
@@ -77,9 +78,5 @@ public class AliyunOssAvatarStorageService implements AvatarStorageService {
 
     private String trimSlashes(String value) {
         return value.replaceAll("^/+", "").replaceAll("/+$", "");
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
     }
 }

@@ -1,5 +1,6 @@
 package com.yun.yunaiagent.user;
 
+import com.yun.yunaiagent.common.ValidationUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,8 +21,8 @@ public class UserService {
 
     @Transactional
     public AppUser register(UserDtos.RegisterRequest request) {
-        String username = required(request.username(), "username");
-        String password = required(request.password(), "password");
+        String username = ValidationUtils.required(request.username(), "username");
+        String password = ValidationUtils.required(request.password(), "password");
         if (repository.existsByUsername(username)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists");
         }
@@ -32,8 +33,8 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public AppUser authenticate(UserDtos.LoginRequest request) {
-        String username = required(request.username(), "username");
-        String password = required(request.password(), "password");
+        String username = ValidationUtils.required(request.username(), "username");
+        String password = ValidationUtils.required(request.password(), "password");
         AppUser user = repository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password"));
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
@@ -60,12 +61,5 @@ public class UserService {
         AppUser user = findByUsername(username);
         user.updateAvatarUrl(avatarUrl);
         return repository.save(user);
-    }
-
-    private String required(String value, String field) {
-        if (value == null || value.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, field + " is required");
-        }
-        return value.trim();
     }
 }

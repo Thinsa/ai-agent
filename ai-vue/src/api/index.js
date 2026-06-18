@@ -66,13 +66,26 @@ export const updateProfile = (payload) => request.put('/user/profile', payload).
 export const uploadAvatar = (file) => {
   const formData = new FormData()
   formData.append('file', file)
-  return request.post('/user/avatar', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  }).then(res => res.data)
+  return request.post('/user/avatar', formData).then(res => res.data)
 }
 export const logout = () => request.post('/user/logout').then(res => res.data)
+
+// 背景管理
+export const fetchBackgrounds = () => request.get('/backgrounds').then(res => res.data)
+export const saveBackground = (agentKey, formData) =>
+  request.post(`/backgrounds/${agentKey}`, formData).then(res => res.data)
+export const updateBackgroundOpacity = (agentKey, opacity) =>
+  request.post(`/backgrounds/${agentKey}/opacity`, { opacity }).then(res => res.data)
+export const deleteBackground = (agentKey) =>
+  request.delete(`/backgrounds/${agentKey}`).then(res => res.data)
+
+// 固定剧本存档
+export const createStorySave = (storyId, sceneId, choiceHistory) =>
+  request.post('/story-saves', { storyId, sceneId, choiceHistory }).then(res => res.data)
+export const listStorySaves = () =>
+  request.get('/story-saves').then(res => res.data)
+export const deleteStorySave = (saveId) =>
+  request.delete(`/story-saves/${saveId}`).then(res => res.data)
 
 export const connectSSE = (url, params = {}, onMessage, onError) => {
   const token = getStoredToken()
@@ -109,6 +122,14 @@ export const chatWithLoveAppRag = (message, chatId) => {
   return request.get('/ai/love_app/chat/rag', { params: { message, chatId } }).then(res => res.data)
 }
 
+export const chatBasic = (message, chatId, onMessage, onError) => {
+  return connectSSE('/ai/chat/sse', { message, chatId }, onMessage, onError)
+}
+
+export const chatStory = (message, chatId, onMessage, onError) => {
+  return connectSSE('/ai/story/sse', { message, chatId }, onMessage, onError)
+}
+
 export const chatWithManus = (message, chatId) => {
   return connectSSE('/ai/manus/chat', { message, chatId })
 }
@@ -142,6 +163,10 @@ export default {
   chatWithLoveAppRag,
   chatWithManus,
   chatWithManusMcp,
+  chatStory,
   listChatSessions,
-  getChatHistory
+  getChatHistory,
+  createStorySave,
+  listStorySaves,
+  deleteStorySave
 }

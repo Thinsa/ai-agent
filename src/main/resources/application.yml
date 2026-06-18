@@ -14,8 +14,8 @@ spring:
     open-in-view: false
   servlet:
     multipart:
-      max-file-size: ${ALIYUN_OSS_MAX_AVATAR_SIZE_BYTES:5MB}
-      max-request-size: ${ALIYUN_OSS_MAX_AVATAR_SIZE_BYTES:5MB}
+      max-file-size: ${ALIYUN_OSS_MAX_AVATAR_SIZE_BYTES:10MB}
+      max-request-size: ${ALIYUN_OSS_MAX_AVATAR_SIZE_BYTES:10MB}
   ai:
     model:
       chat: openai
