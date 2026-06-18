@@ -10,6 +10,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Optional;
 
 @Service
 public class JwtService {
@@ -30,13 +31,19 @@ public class JwtService {
     }
 
     public String generateToken(String username) {
+        return createToken(username).token();
+    }
+
+    public TokenInfo createToken(String username) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        Instant expiresAt = now.plusMillis(expirationMillis);
+        String token = Jwts.builder()
                 .subject(username)
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusMillis(expirationMillis)))
+                .expiration(Date.from(expiresAt))
                 .signWith(secretKey)
                 .compact();
+        return new TokenInfo(token, expiresAt.toEpochMilli(), expirationMillis);
     }
 
     public String parseUsername(String token) {
@@ -46,5 +53,30 @@ public class JwtService {
                 .parseSignedClaims(token)
                 .getPayload();
         return claims.getSubject();
+    }
+
+    public Optional<TokenValidation> validateToken(String token) {
+        if (token == null || token.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return Optional.of(new TokenValidation(
+                    claims.getSubject(),
+                    claims.getExpiration().toInstant().toEpochMilli()
+            ));
+        } catch (Exception ignored) {
+            return Optional.empty();
+        }
+    }
+
+    public record TokenInfo(String token, long expiresAt, long expiresIn) {
+    }
+
+    public record TokenValidation(String username, long expiresAt) {
     }
 }

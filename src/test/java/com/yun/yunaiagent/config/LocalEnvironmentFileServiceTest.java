@@ -31,14 +31,16 @@ class LocalEnvironmentFileServiceTest {
                         "APP_JWT_SECRET", "user-secret",
                         "SPRING_DATASOURCE_URL", "jdbc:postgresql://localhost:5432/yun_ai_agent",
                         "PEXELS_API_KEY", "user-pexels",
-                        "OPENAI_BASE_URL", "https://api.xiaomimimo.com/v1"
+                        "OPENAI_BASE_URL", "https://api.xiaomimimo.com/v1",
+                        "DASHSCOPE_IMAGE_SIZE", "1024*1024"
                 ),
                 Map.of(
                         "APP_JWT_SECRET", "process-secret",
                         "APP_TOOLS_MAX_OUTPUT_CHARS", "4000",
                         "PEXELS_API_KEY", "process-pexels",
                         "APP_MCP_CLIENT_ENABLED", "true",
-                        "OPENAI_CHAT_MODEL", "mimo-v2.5"
+                        "OPENAI_CHAT_MODEL", "mimo-v2.5",
+                        "DASHSCOPE_IMAGE_MODEL", "qwen-image-2.0-pro"
                 )
         );
 
@@ -52,6 +54,8 @@ class LocalEnvironmentFileServiceTest {
         assertThat(merged).contains("APP_MCP_CLIENT_ENABLED=true");
         assertThat(merged).contains("OPENAI_BASE_URL=https://api.xiaomimimo.com/v1");
         assertThat(merged).contains("OPENAI_CHAT_MODEL=mimo-v2.5");
+        assertThat(merged).contains("DASHSCOPE_IMAGE_SIZE=1024*1024");
+        assertThat(merged).contains("DASHSCOPE_IMAGE_MODEL=qwen-image-2.0-pro");
         assertThat(result.writtenKeys()).contains("APP_JWT_SECRET", "SPRING_DATASOURCE_URL", "APP_TOOLS_MAX_OUTPUT_CHARS", "PEXELS_API_KEY");
         assertThat(result.safeSummary()).contains("APP_JWT_SECRET=set");
         assertThat(result.safeSummary()).doesNotContain("process-secret");

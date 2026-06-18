@@ -19,6 +19,9 @@ public class LocalEnvironmentFileService {
     public static final List<String> MANAGED_KEYS = List.of(
             "DASHSCOPE_API_KEY",
             "DASHSCOPE_CHAT_MODEL",
+            "DASHSCOPE_IMAGE_MODEL",
+            "DASHSCOPE_IMAGE_SIZE",
+            "DASHSCOPE_IMAGE_NEGATIVE_PROMPT",
             "OPENAI_API_KEY",
             "OPENAI_BASE_URL",
             "OPENAI_CHAT_MODEL",
@@ -34,6 +37,17 @@ public class LocalEnvironmentFileService {
             "APP_TOOLS_MAX_OUTPUT_CHARS",
             "APP_MCP_CLIENT_ENABLED",
             "APP_MCP_IMAGE_SEARCH_URL",
+            "ALIYUN_OSS_ENDPOINT",
+            "ALIYUN_OSS_BUCKET",
+            "ALIYUN_OSS_ACCESS_KEY_ID",
+            "ALIYUN_OSS_ACCESS_KEY_SECRET",
+            "OSS_ACCESS_KEY_ID",
+            "OSS_ACCESS_KEY_SECRET",
+            "KEYID",
+            "KEYSECRET",
+            "ALIYUN_OSS_PUBLIC_BASE_URL",
+            "ALIYUN_OSS_AVATAR_DIR",
+            "ALIYUN_OSS_MAX_AVATAR_SIZE_BYTES",
             "PEXELS_API_KEY",
             "PEXELS_API_URL"
     );

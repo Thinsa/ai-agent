@@ -6,13 +6,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -40,6 +46,9 @@ class UserControllerTest {
     @Autowired
     ObjectMapper objectMapper;
 
+    @MockitoBean
+    AvatarStorageService avatarStorageService;
+
     @Test
     void registerLoginCurrentAndUpdateProfileUseJwtAuthentication() throws Exception {
         Map<String, String> registerRequest = Map.of(
@@ -63,9 +72,11 @@ class UserControllerTest {
 
         String loginResponse = mockMvc.perform(post("/user/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("username", "ash", "password", "pikachu123"))))
+                .content(objectMapper.writeValueAsString(Map.of("username", "ash", "password", "pikachu123"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.username").value("ash"))
+                .andExpect(jsonPath("$.expiresAt").isNumber())
+                .andExpect(jsonPath("$.expiresIn").value(3600000))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -81,6 +92,22 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("ash"));
 
+        mockMvc.perform(get("/user/token/validate")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true))
+                .andExpect(jsonPath("$.username").value("ash"))
+                .andExpect(jsonPath("$.expiresAt").isNumber());
+
+        mockMvc.perform(get("/user/token/validate")
+                        .header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false));
+
+        mockMvc.perform(get("/user/token/validate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false));
+
         mockMvc.perform(put("/user/profile")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -93,5 +120,21 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.displayName").value("皮卡丘训练家"))
                 .andExpect(jsonPath("$.email").value("trainer@example.com"));
+
+        when(avatarStorageService.uploadAvatar(eq("ash"), any()))
+                .thenReturn("https://yuc-ai.oss-cn-beijing.aliyuncs.com/avatars/ash/avatar.png");
+        MockMultipartFile avatar = new MockMultipartFile(
+                "file",
+                "avatar.png",
+                MediaType.IMAGE_PNG_VALUE,
+                new byte[]{1, 2, 3}
+        );
+
+        mockMvc.perform(multipart("/user/avatar")
+                        .file(avatar)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("ash"))
+                .andExpect(jsonPath("$.avatarUrl").value("https://yuc-ai.oss-cn-beijing.aliyuncs.com/avatars/ash/avatar.png"));
     }
 }

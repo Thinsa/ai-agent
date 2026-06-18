@@ -17,7 +17,7 @@ public final class UserDtos {
     }
 
     public record UserResponse(Long id, String username, String displayName, String email, String role, String bio,
-                               LocalDateTime createdAt) {
+                               String avatarUrl, LocalDateTime createdAt) {
         public static UserResponse from(AppUser user) {
             return new UserResponse(
                     user.getId(),
@@ -26,11 +26,22 @@ public final class UserDtos {
                     user.getEmail(),
                     user.getRole(),
                     user.getBio(),
+                    user.getAvatarUrl(),
                     user.getCreatedAt()
             );
         }
     }
 
-    public record LoginResponse(String token, UserResponse user) {
+    public record LoginResponse(String token, UserResponse user, long expiresAt, long expiresIn) {
+    }
+
+    public record TokenValidationResponse(boolean valid, String username, Long expiresAt, UserResponse user) {
+        public static TokenValidationResponse invalid() {
+            return new TokenValidationResponse(false, null, null, null);
+        }
+
+        public static TokenValidationResponse valid(String username, long expiresAt, AppUser user) {
+            return new TokenValidationResponse(true, username, expiresAt, UserResponse.from(user));
+        }
     }
 }

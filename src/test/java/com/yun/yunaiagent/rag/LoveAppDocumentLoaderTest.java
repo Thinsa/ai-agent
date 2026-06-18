@@ -10,7 +10,13 @@ class LoveAppDocumentLoaderTest {
     void loadDocumentsReadsClasspathMarkdownFiles() {
         LoveAppDocumentLoader loader = new LoveAppDocumentLoader();
 
-        assertThat(loader.loadDocuments())
+        var documents = loader.loadDocuments();
+
+        assertThat(documents)
+                .hasSizeGreaterThanOrEqualTo(4)
                 .anySatisfy(document -> assertThat(document).contains("健康关系"));
+        assertThat(documents).anySatisfy(document -> assertThat(document).contains("单身篇"));
+        assertThat(documents).anySatisfy(document -> assertThat(document).contains("已婚篇"));
+        assertThat(documents).anySatisfy(document -> assertThat(document).contains("恋爱篇"));
     }
 }

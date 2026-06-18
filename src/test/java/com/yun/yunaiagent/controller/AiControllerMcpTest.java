@@ -36,6 +36,27 @@ class AiControllerMcpTest {
         assertThat(emitter).isNotNull();
     }
 
+    @Test
+    void manusChatUsesAvailableToolProviderForLocalTools() {
+        ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
+        TrackingProvider trackingProvider = new TrackingProvider(provider);
+        AiController controller = new AiController(
+                mock(LoveApp.class),
+                List.of(),
+                mock(ChatModel.class),
+                trackingProvider,
+                mock(UserService.class),
+                mock(JwtService.class),
+                mock(ChatHistoryService.class)
+        );
+
+        SseEmitter emitter = controller.doChatWithManus("hello", "chat-test", null, null);
+
+        assertThat(emitter).isNotNull();
+        assertThat(trackingProvider.getIfAvailableCalled).isTrue();
+        assertThat(trackingProvider.getIfUniqueCalled).isFalse();
+    }
+
     private static ObjectProvider<ToolCallbackProvider> emptyProvider() {
         return new ObjectProvider<>() {
             @Override
@@ -58,5 +79,40 @@ class AiControllerMcpTest {
                 return null;
             }
         };
+    }
+
+    private static class TrackingProvider implements ObjectProvider<ToolCallbackProvider> {
+
+        private final ToolCallbackProvider provider;
+
+        private boolean getIfAvailableCalled;
+
+        private boolean getIfUniqueCalled;
+
+        private TrackingProvider(ToolCallbackProvider provider) {
+            this.provider = provider;
+        }
+
+        @Override
+        public ToolCallbackProvider getObject(Object... args) {
+            return provider;
+        }
+
+        @Override
+        public ToolCallbackProvider getIfAvailable() {
+            getIfAvailableCalled = true;
+            return provider;
+        }
+
+        @Override
+        public ToolCallbackProvider getIfUnique() {
+            getIfUniqueCalled = true;
+            return provider;
+        }
+
+        @Override
+        public ToolCallbackProvider getObject() {
+            return provider;
+        }
     }
 }

@@ -22,6 +22,7 @@ public class ToolRegistration {
             ResourceDownloadTool resourceDownloadTool,
             TerminalOperationTool terminalOperationTool,
             PDFGenerationTool pdfGenerationTool,
+            ImageGenerationTool imageGenerationTool,
             TerminateTool terminateTool
     ) {
         return MethodToolCallbackProvider.builder()
@@ -32,6 +33,7 @@ public class ToolRegistration {
                         resourceDownloadTool,
                         terminalOperationTool,
                         pdfGenerationTool,
+                        imageGenerationTool,
                         terminateTool
                 )
                 .build();

@@ -2,15 +2,19 @@ package com.yun.yunaiagent.controller;
 
 import com.yun.yunaiagent.security.JwtService;
 import com.yun.yunaiagent.user.AppUser;
+import com.yun.yunaiagent.user.AvatarStorageService;
 import com.yun.yunaiagent.user.UserDtos;
 import com.yun.yunaiagent.user.UserService;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/user")
@@ -20,9 +24,12 @@ public class UserController {
 
     private final JwtService jwtService;
 
-    public UserController(UserService userService, JwtService jwtService) {
+    private final AvatarStorageService avatarStorageService;
+
+    public UserController(UserService userService, JwtService jwtService, AvatarStorageService avatarStorageService) {
         this.userService = userService;
         this.jwtService = jwtService;
+        this.avatarStorageService = avatarStorageService;
     }
 
     @PostMapping("/register")
@@ -33,7 +40,13 @@ public class UserController {
     @PostMapping("/login")
     public UserDtos.LoginResponse login(@RequestBody UserDtos.LoginRequest request) {
         AppUser user = userService.authenticate(request);
-        return new UserDtos.LoginResponse(jwtService.generateToken(user.getUsername()), UserDtos.UserResponse.from(user));
+        JwtService.TokenInfo tokenInfo = jwtService.createToken(user.getUsername());
+        return new UserDtos.LoginResponse(
+                tokenInfo.token(),
+                UserDtos.UserResponse.from(user),
+                tokenInfo.expiresAt(),
+                tokenInfo.expiresIn()
+        );
     }
 
     @GetMapping("/current")
@@ -41,13 +54,38 @@ public class UserController {
         return UserDtos.UserResponse.from(userService.findByUsername(authentication.getName()));
     }
 
+    @GetMapping("/token/validate")
+    public UserDtos.TokenValidationResponse validateToken(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        String token = resolveBearerToken(authorization);
+        return jwtService.validateToken(token)
+                .map(validation -> UserDtos.TokenValidationResponse.valid(
+                        validation.username(),
+                        validation.expiresAt(),
+                        userService.findByUsername(validation.username())
+                ))
+                .orElseGet(UserDtos.TokenValidationResponse::invalid);
+    }
+
     @PutMapping("/profile")
     public UserDtos.UserResponse updateProfile(Authentication authentication, @RequestBody UserDtos.ProfileUpdateRequest request) {
         return UserDtos.UserResponse.from(userService.updateProfile(authentication.getName(), request));
     }
 
+    @PostMapping("/avatar")
+    public UserDtos.UserResponse uploadAvatar(Authentication authentication, @RequestParam("file") MultipartFile file) {
+        String avatarUrl = avatarStorageService.uploadAvatar(authentication.getName(), file);
+        return UserDtos.UserResponse.from(userService.updateAvatar(authentication.getName(), avatarUrl));
+    }
+
     @PostMapping("/logout")
     public String logout() {
         return "ok";
+    }
+
+    private String resolveBearerToken(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return null;
+        }
+        return authorization.substring(7);
     }
 }

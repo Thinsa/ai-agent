@@ -63,6 +63,17 @@ public class ToolCallAgent extends ReActAgent {
     }
 
     @Override
+    protected String toAssistantMessage(String result) {
+        if (result == null || result.isBlank()) {
+            return "";
+        }
+        return result.lines()
+                .filter(line -> !line.matches("^Step\\s+\\d+:.*"))
+                .collect(Collectors.joining(System.lineSeparator()))
+                .trim();
+    }
+
+    @Override
     protected String think(String userPrompt, int stepNumber) {
         return "思考任务目标与可用工具。";
     }
@@ -100,8 +111,10 @@ public class ToolCallAgent extends ReActAgent {
     private String systemPrompt() {
         String memory = recentMemory();
         String prompt = """
-                You are YuManus, a ReAct-style local agent. Use the registered tools when they help,
-                keep the answer concise, and call doTerminate when the task is complete.
+                You are YuManus, a ReAct-style local agent. Use the registered tools when they help.
+                Use searchWeb when the user needs current or internet information.
+                Use generateImage when the user asks to generate, draw, create, or make an image.
+                Keep the answer concise, include useful tool results such as image URLs, and call doTerminate when the task is complete.
                 """;
         if (memory.isBlank()) {
             return prompt;

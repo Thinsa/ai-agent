@@ -22,6 +22,9 @@ class ApplicationYamlTest {
 
         assertThat(yaml).contains("${DASHSCOPE_API_KEY:}");
         assertThat(yaml).contains("${OPENAI_API_KEY:${DASHSCOPE_API_KEY:}}");
+        assertThat(yaml).contains("model: ${DASHSCOPE_IMAGE_MODEL:qwen-image-2.0-pro}");
+        assertThat(yaml).contains("size: ${DASHSCOPE_IMAGE_SIZE:2048*2048}");
+        assertThat(yaml).contains("negative-prompt: ${DASHSCOPE_IMAGE_NEGATIVE_PROMPT:}");
         assertThat(yaml).doesNotContain("sk-");
     }
 }

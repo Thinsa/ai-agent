@@ -35,6 +35,9 @@ public class AppUser {
     @Column(length = 1000)
     private String bio;
 
+    @Column(name = "avatar_url", length = 1000)
+    private String avatarUrl;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -60,6 +63,11 @@ public class AppUser {
         this.email = normalize(email, "");
         this.role = normalize(role, "");
         this.bio = normalize(bio, "");
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updateAvatarUrl(String avatarUrl) {
+        this.avatarUrl = normalize(avatarUrl, "");
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -96,6 +104,10 @@ public class AppUser {
 
     public String getBio() {
         return bio;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
     }
 
     public LocalDateTime getCreatedAt() {

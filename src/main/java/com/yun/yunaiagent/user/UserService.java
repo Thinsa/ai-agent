@@ -55,6 +55,13 @@ public class UserService {
         return repository.save(user);
     }
 
+    @Transactional
+    public AppUser updateAvatar(String username, String avatarUrl) {
+        AppUser user = findByUsername(username);
+        user.updateAvatarUrl(avatarUrl);
+        return repository.save(user);
+    }
+
     private String required(String value, String field) {
         if (value == null || value.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, field + " is required");

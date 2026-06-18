@@ -1,5 +1,6 @@
 package com.yun.yunaiagent.app;
 
+import com.yun.yunaiagent.chat.ChatHistoryService;
 import com.yun.yunaiagent.rag.LoveAppDocumentLoader;
 import com.yun.yunaiagent.rag.LoveAppRagService;
 import com.yun.yunaiagent.rag.QueryRewriter;
@@ -16,6 +17,10 @@ import reactor.core.publisher.Flux;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 class LoveAppTest {
 
@@ -23,18 +28,30 @@ class LoveAppTest {
     void doChatUsesChatModelContent() {
         LoveApp loveApp = new LoveApp(new FakeChatModel(), fakeRagService(), emptyProvider());
 
-        String response = loveApp.doChat("你好", "chat-1");
+        String response = loveApp.doChat("hello", "chat-1");
 
-        assertThat(response).contains("模型回复");
+        assertThat(response).contains("model response");
     }
 
     @Test
     void doChatByStreamReturnsModelChunks() {
         LoveApp loveApp = new LoveApp(new FakeChatModel(), fakeRagService(), emptyProvider());
 
-        List<String> chunks = loveApp.doChatByStream("你好", "chat-1").collectList().block();
+        List<String> chunks = loveApp.doChatByStream("hello", "chat-1").collectList().block();
 
-        assertThat(chunks).containsExactly("流式", "回复");
+        assertThat(chunks).containsExactly("stream", "response");
+    }
+
+    @Test
+    void doChatWithRagRecordsConversationHistory() {
+        ChatHistoryService chatHistoryService = mock(ChatHistoryService.class);
+        LoveApp loveApp = new LoveApp(new FakeChatModel(), fakeRagService(), emptyProvider(), chatHistoryService);
+
+        String response = loveApp.doChatWithRag("How to date well?", "love-rag-1", null);
+
+        assertThat(response).contains("model response");
+        verify(chatHistoryService).appendUserMessage(eq("love"), eq("love-rag-1"), eq("How to date well?"), isNull());
+        verify(chatHistoryService).appendAssistantMessage(eq("love"), eq("love-rag-1"), eq(response), isNull());
     }
 
     private static ObjectProvider<org.springframework.ai.tool.ToolCallbackProvider> emptyProvider() {
@@ -89,14 +106,14 @@ class LoveAppTest {
 
         @Override
         public ChatResponse call(Prompt prompt) {
-            return new ChatResponse(List.of(new Generation(new AssistantMessage("模型回复：" + prompt.getContents()))));
+            return new ChatResponse(List.of(new Generation(new AssistantMessage("model response: " + prompt.getContents()))));
         }
 
         @Override
         public Flux<ChatResponse> stream(Prompt prompt) {
             return Flux.just(
-                    new ChatResponse(List.of(new Generation(new AssistantMessage("流式")))),
-                    new ChatResponse(List.of(new Generation(new AssistantMessage("回复"))))
+                    new ChatResponse(List.of(new Generation(new AssistantMessage("stream")))),
+                    new ChatResponse(List.of(new Generation(new AssistantMessage("response"))))
             );
         }
 

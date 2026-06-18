@@ -29,7 +29,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(unauthorizedEntryPoint))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/user/register", "/user/login", "/health", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/user/register", "/user/login", "/user/token/validate", "/health", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/user/current", "/user/profile", "/user/logout").authenticated()
                         .anyRequest().permitAll()
                 )

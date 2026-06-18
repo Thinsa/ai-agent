@@ -99,8 +99,8 @@ public class AiController {
     }
 
     @GetMapping("/love_app/chat/rag")
-    public String doChatWithLoveAppRag(String message, String chatId) {
-        return loveApp.doChatWithRag(message, chatId);
+    public String doChatWithLoveAppRag(String message, String chatId, @RequestParam(required = false) String token, Authentication authentication) {
+        return loveApp.doChatWithRag(message, chatId, currentUser(authentication, token));
     }
 
     @GetMapping("/love_app/chat/tools")
@@ -118,7 +118,7 @@ public class AiController {
      */
     @GetMapping(value = "/manus/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter doChatWithManus(String message, String chatId, @RequestParam(required = false) String token, Authentication authentication) {
-        YuManus yuManus = new YuManus(allTools, chatModel, toolCallbackProvider.getIfUnique(), chatHistoryService, chatId, currentUser(authentication, token));
+        YuManus yuManus = new YuManus(allTools, chatModel, toolCallbackProvider.getIfAvailable(), chatHistoryService, chatId, currentUser(authentication, token));
         return yuManus.runStream(message);
     }
 

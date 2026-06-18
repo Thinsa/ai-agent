@@ -6,8 +6,8 @@ import com.yun.yunaiagent.user.AppUser;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallbackProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
@@ -25,7 +25,7 @@ public class LoveApp {
     private static final String DEFAULT_CHAT_ID = "default";
 
     private static final String SYSTEM_PROMPT = """
-            你是“AI 恋爱大师”，用温和、清晰、负责任的中文回答用户的情感问题。
+            你是“AI 恋爱大师”，请用温和、清晰、负责的中文回答用户的情感问题。
             先共情，再给具体建议，避免操控、PUA 或伤害性建议。
             """;
 
@@ -38,7 +38,8 @@ public class LoveApp {
     private final ChatHistoryService chatHistoryService;
 
     @Autowired
-    public LoveApp(@Qualifier("openAiChatModel") ChatModel chatModel, LoveAppRagService ragService, ObjectProvider<ToolCallbackProvider> toolCallbackProvider, ChatHistoryService chatHistoryService) {
+    public LoveApp(@Qualifier("openAiChatModel") ChatModel chatModel, LoveAppRagService ragService,
+                   ObjectProvider<ToolCallbackProvider> toolCallbackProvider, ChatHistoryService chatHistoryService) {
         this.chatClient = ChatClient.builder(chatModel).build();
         this.ragService = ragService;
         this.toolCallbackProvider = toolCallbackProvider;
@@ -46,10 +47,7 @@ public class LoveApp {
     }
 
     public LoveApp(ChatModel chatModel, LoveAppRagService ragService, ObjectProvider<ToolCallbackProvider> toolCallbackProvider) {
-        this.chatClient = ChatClient.builder(chatModel).build();
-        this.ragService = ragService;
-        this.toolCallbackProvider = toolCallbackProvider;
-        this.chatHistoryService = null;
+        this(chatModel, ragService, toolCallbackProvider, null);
     }
 
     public String doChat(String message, String chatId) {
@@ -88,14 +86,22 @@ public class LoveApp {
     }
 
     public String doChatWithRag(String message, String chatId) {
-        String context = ragService.retrieveContext(normalize(message));
-        return basePrompt("""
+        return doChatWithRag(message, chatId, null);
+    }
+
+    public String doChatWithRag(String message, String chatId, AppUser user) {
+        String normalizedMessage = normalize(message);
+        recordUserMessage(chatId, normalizedMessage, user);
+        String context = ragService.retrieveContext(normalizedMessage);
+        String content = basePrompt("""
                 请优先参考以下知识库内容回答。
                 知识库：
                 %s
 
                 用户问题：%s
-                """.formatted(context, normalize(message)), chatId).call().content();
+                """.formatted(context, normalizedMessage), chatId).call().content();
+        recordAssistantMessage(chatId, content, user);
+        return content;
     }
 
     public String doChatWithTools(String message, String chatId) {

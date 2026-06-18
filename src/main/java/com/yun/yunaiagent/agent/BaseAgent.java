@@ -40,7 +40,7 @@ public abstract class BaseAgent {
         if (state == AgentState.RUNNING) {
             state = AgentState.FINISHED;
         }
-        String finalResult = result.toString().trim();
+        String finalResult = toAssistantMessage(result.toString().trim());
         afterRun(userPrompt, finalResult);
         return finalResult;
     }
@@ -51,23 +51,29 @@ public abstract class BaseAgent {
     public SseEmitter runStream(String userPrompt) {
         SseEmitter emitter = new SseEmitter(300000L);
         CompletableFuture.runAsync(() -> {
+            StringBuilder result = new StringBuilder();
+            boolean persisted = false;
             try {
                 state = AgentState.RUNNING;
                 messageList.add("User: " + normalize(userPrompt));
                 beforeRun(userPrompt);
-                StringBuilder result = new StringBuilder();
                 for (int i = 1; i <= maxSteps && state == AgentState.RUNNING; i++) {
                     String stepResult = step(userPrompt, i);
                     result.append(stepResult).append(System.lineSeparator());
-                    emitter.send(stepResult);
+                    emitter.send(toAssistantMessage(stepResult));
                 }
                 if (state == AgentState.RUNNING) {
                     state = AgentState.FINISHED;
                 }
-                afterRun(userPrompt, result.toString().trim());
+                afterRun(userPrompt, toAssistantMessage(result.toString().trim()));
+                persisted = true;
+                emitter.send("[DONE]");
                 emitter.complete();
             } catch (IOException e) {
                 state = AgentState.ERROR;
+                if (!persisted && !result.toString().isBlank()) {
+                    afterRun(userPrompt, toAssistantMessage(result.toString().trim()));
+                }
                 emitter.completeWithError(e);
             }
         });
@@ -83,6 +89,10 @@ public abstract class BaseAgent {
     }
 
     protected void afterRun(String userPrompt, String result) {
+    }
+
+    protected String toAssistantMessage(String result) {
+        return result == null ? "" : result.trim();
     }
 
     /**

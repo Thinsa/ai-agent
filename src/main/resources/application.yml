@@ -12,6 +12,10 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: ${ALIYUN_OSS_MAX_AVATAR_SIZE_BYTES:5MB}
+      max-request-size: ${ALIYUN_OSS_MAX_AVATAR_SIZE_BYTES:5MB}
   ai:
     model:
       chat: openai
@@ -34,11 +38,11 @@ spring:
         model: gemma3:1b
     mcp:
       client:
-        enabled: ${APP_MCP_CLIENT_ENABLED}
+        enabled: ${APP_MCP_CLIENT_ENABLED:false}
         sse:
           connections:
             image-search:
-              url: ${APP_MCP_IMAGE_SEARCH_URL}
+              url: ${APP_MCP_IMAGE_SEARCH_URL:http://localhost:8127}
     vectorstore:
       pgvector:
         initialize-schema: true
@@ -71,6 +75,23 @@ knife4j:
 
 search-api:
   api-key: ${SEARCH_API_API_KEY:}
+
+dashscope:
+  image:
+    api-key: ${DASHSCOPE_API_KEY:}
+    model: ${DASHSCOPE_IMAGE_MODEL:qwen-image-2.0-pro}
+    size: ${DASHSCOPE_IMAGE_SIZE:2048*2048}
+    negative-prompt: ${DASHSCOPE_IMAGE_NEGATIVE_PROMPT:}
+
+aliyun:
+  oss:
+    endpoint: ${ALIYUN_OSS_ENDPOINT:}
+    bucket: ${ALIYUN_OSS_BUCKET:}
+    access-key-id: ${ALIYUN_OSS_ACCESS_KEY_ID:${OSS_ACCESS_KEY_ID:${KEYID:}}}
+    access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:${OSS_ACCESS_KEY_SECRET:${KEYSECRET:}}}
+    public-base-url: ${ALIYUN_OSS_PUBLIC_BASE_URL:}
+    avatar-dir: ${ALIYUN_OSS_AVATAR_DIR:avatars}
+    max-avatar-size-bytes: ${ALIYUN_OSS_MAX_AVATAR_SIZE_BYTES:5242880}
 
 app:
   jwt:
