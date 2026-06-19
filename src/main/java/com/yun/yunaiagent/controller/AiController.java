@@ -12,25 +12,33 @@ import com.yun.yunaiagent.chat.ChatHistoryService;
 import com.yun.yunaiagent.chat.ChatMessage;
 import com.yun.yunaiagent.security.JwtService;
 import com.yun.yunaiagent.tools.AgentTool;
+import com.yun.yunaiagent.tools.OssObjectStorageService;
 import com.yun.yunaiagent.user.AppUser;
 import com.yun.yunaiagent.user.UserService;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -57,7 +65,9 @@ public class AiController {
 
     private final ChatHistoryService chatHistoryService;
 
-    public AiController(LoveApp loveApp, List<AgentTool> allTools, @Qualifier("openAiChatModel") ChatModel chatModel, ObjectProvider<ToolCallbackProvider> toolCallbackProvider, UserService userService, JwtService jwtService, ChatHistoryService chatHistoryService) {
+    private final OssObjectStorageService ossService;
+
+    public AiController(LoveApp loveApp, List<AgentTool> allTools, @Qualifier("openAiChatModel") ChatModel chatModel, ObjectProvider<ToolCallbackProvider> toolCallbackProvider, UserService userService, JwtService jwtService, ChatHistoryService chatHistoryService, OssObjectStorageService ossService) {
         this.loveApp = loveApp;
         this.allTools = allTools;
         this.chatModel = chatModel;
@@ -65,6 +75,7 @@ public class AiController {
         this.userService = userService;
         this.jwtService = jwtService;
         this.chatHistoryService = chatHistoryService;
+        this.ossService = ossService;
     }
 
     @GetMapping(value = "/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -88,6 +99,63 @@ public class AiController {
                                 answer.toString(), user);
                     }
                 });
+    }
+
+    @PostMapping("/upload")
+    public Map<String, String> uploadFile(@RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) String token, Authentication authentication) {
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File is required");
+        }
+        try {
+            currentUser(authentication, token);
+
+            String originalName = file.getOriginalFilename();
+            String safeName = (originalName != null && !originalName.isBlank())
+                    ? originalName : "upload_" + System.currentTimeMillis();
+            String contentType = file.getContentType();
+            boolean isImage = contentType != null && contentType.startsWith("image/");
+
+            if (isImage) {
+                // Image upload to OSS for public URL
+                String objectKey = "uploads/images/" + System.currentTimeMillis() + "_" + safeName;
+                String imageUrl = ossService.upload(objectKey, file.getBytes(), contentType);
+                return Map.of(
+                        "fileName", safeName,
+                        "filePath", objectKey,
+                        "contentType", contentType,
+                        "imageUrl", imageUrl,
+                        "preview", "",
+                        "isImage", "true"
+                );
+            }
+
+            // Non-image files saved to local workspace
+            Path workspaceDir = Path.of(System.getProperty("user.dir"), "workspace", "uploads");
+            Files.createDirectories(workspaceDir);
+            Path target = workspaceDir.resolve(safeName);
+            file.transferTo(target);
+
+            String preview = "";
+            if (contentType != null && (contentType.startsWith("text/") ||
+                    safeName.matches(".*\\.(txt|md|json|xml|csv|log|java|py|js|html|css|yml|yaml|properties)$"))) {
+                try {
+                    String content = Files.readString(target);
+                    preview = content.length() > 2000 ? content.substring(0, 2000) + "\n...(truncated)" : content;
+                } catch (IOException ignored) {
+                }
+            }
+
+            return Map.of(
+                    "fileName", safeName,
+                    "filePath", target.toString(),
+                    "contentType", contentType != null ? contentType : "application/octet-stream",
+                    "preview", preview,
+                    "isImage", "false"
+            );
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Upload failed: " + e.getMessage(), e);
+        }
     }
 
     private static final String STORY_SYSTEM_PROMPT = """
@@ -132,7 +200,7 @@ public class AiController {
         // 加载最近对话历史（最多 30 条），构建 Prompt
         List<Message> history = List.of();
         if (chatHistoryService != null) {
-            List<ChatMessage> recent = chatHistoryService.recentMessages("chat", effectiveChatId, 30);
+            List<ChatMessage> recent = chatHistoryService.recentMessages("chat", effectiveChatId, 30, user);
             history = recent.stream()
                     .map(m -> m.getRole().equals("user")
                             ? (Message) new UserMessage(m.getContent())
@@ -168,8 +236,16 @@ public class AiController {
      * 直接返回 Reactor Flux，适合前端按文本片段消费 SSE 数据。
      */
     @GetMapping(value = "/love_app/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> doChatWithLoveAppSSE(String message, String chatId, @RequestParam(required = false) String token, Authentication authentication) {
-        return loveApp.doChatByStream(message, chatId, currentUser(authentication, token));
+    public Flux<String> doChatWithLoveAppSSE(
+            String message, String chatId,
+            @RequestParam(required = false) String imageUrl,
+            @RequestParam(required = false) String token,
+            Authentication authentication) {
+        AppUser user = currentUser(authentication, token);
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            return loveApp.doChatByStreamWithImage(message, imageUrl, chatId, user);
+        }
+        return loveApp.doChatByStream(message, chatId, user);
     }
 
     /**

@@ -50,17 +50,29 @@ public class ChatHistoryService {
 
     @Transactional(readOnly = true)
     public ChatDtos.ConversationDetail getConversation(String chatId, AppUser user) {
-        ChatConversation conversation = conversationRepository.findByChatId(ValidationUtils.required(chatId, "chatId"))
+        String normalizedChatId = ValidationUtils.required(chatId, "chatId");
+        ChatConversation conversation = (user == null
+                ? conversationRepository.findByChatIdAndUserIsNull(normalizedChatId)
+                : conversationRepository.findByChatIdAndUser(normalizedChatId, user))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found"));
-        if (user != null && conversation.getUser() != null && !conversation.getUser().getId().equals(user.getId())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found");
-        }
+        return ChatDtos.ConversationDetail.from(conversation, messageRepository.findByConversationOrderByCreatedAtAsc(conversation));
+    }
+
+    @Transactional(readOnly = true)
+    public ChatDtos.ConversationDetail getConversation(String module, String chatId, AppUser user) {
+        ChatConversation conversation = findConversation(module, chatId, user)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversation not found"));
         return ChatDtos.ConversationDetail.from(conversation, messageRepository.findByConversationOrderByCreatedAtAsc(conversation));
     }
 
     @Transactional(readOnly = true)
     public List<ChatMessage> recentMessages(String module, String chatId, int limit) {
-        return conversationRepository.findByModuleAndChatId(ValidationUtils.required(module, "module"), ValidationUtils.required(chatId, "chatId"))
+        return recentMessages(module, chatId, limit, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ChatMessage> recentMessages(String module, String chatId, int limit, AppUser user) {
+        return findConversation(module, chatId, user)
                 .map(conversation -> messageRepository.findByConversationOrderByCreatedAtDesc(conversation, PageRequest.of(0, Math.max(1, limit)))
                         .stream()
                         .sorted(Comparator.comparing(ChatMessage::getCreatedAt).thenComparing(ChatMessage::getId))
@@ -72,12 +84,20 @@ public class ChatHistoryService {
         String normalizedModule = ValidationUtils.required(module, "module");
         String normalizedChatId = ValidationUtils.required(chatId, "chatId");
         String normalizedContent = ValidationUtils.required(content, "content");
-        ChatConversation conversation = conversationRepository.findByModuleAndChatId(normalizedModule, normalizedChatId)
+        ChatConversation conversation = findConversation(normalizedModule, normalizedChatId, user)
                 .orElseGet(() -> conversationRepository.save(ChatConversation.create(normalizedModule, normalizedChatId, user, titleFrom(normalizedContent))));
-        conversation.bindUserIfMissing(user);
         conversation.touch();
         ChatMessage message = ChatMessage.create(conversation, user, role, normalizedContent);
         return messageRepository.save(message);
+    }
+
+    private java.util.Optional<ChatConversation> findConversation(String module, String chatId, AppUser user) {
+        String normalizedModule = ValidationUtils.required(module, "module");
+        String normalizedChatId = ValidationUtils.required(chatId, "chatId");
+        if (user == null) {
+            return conversationRepository.findByModuleAndChatIdAndUserIsNull(normalizedModule, normalizedChatId);
+        }
+        return conversationRepository.findByModuleAndChatIdAndUser(normalizedModule, normalizedChatId, user);
     }
 
     private String titleFrom(String content) {

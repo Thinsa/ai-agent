@@ -75,6 +75,39 @@ class ChatHistoryControllerTest {
                 .andExpect(jsonPath("$.messages[0].content").value("Bob question"));
     }
 
+    @Test
+    void detailEndpointUsesModuleAndCurrentUserWhenChatIdMatches() throws Exception {
+        String aliceToken = registerAndLogin("same-detail-alice");
+        String bobToken = registerAndLogin("same-detail-bob");
+        AppUser alice = userService.findByUsername("same-detail-alice");
+        AppUser bob = userService.findByUsername("same-detail-bob");
+
+        chatHistoryService.appendUserMessage("love", "default", "Alice love question", alice);
+        chatHistoryService.appendUserMessage("love", "default", "Bob love question", bob);
+        chatHistoryService.appendUserMessage("super", "default", "Alice super question", alice);
+
+        mockMvc.perform(get("/ai/history/sessions/default")
+                        .param("module", "love")
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.module").value("love"))
+                .andExpect(jsonPath("$.messages[0].content").value("Alice love question"));
+
+        mockMvc.perform(get("/ai/history/sessions/default")
+                        .param("module", "love")
+                        .header("Authorization", "Bearer " + bobToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.module").value("love"))
+                .andExpect(jsonPath("$.messages[0].content").value("Bob love question"));
+
+        mockMvc.perform(get("/ai/history/sessions/default")
+                        .param("module", "super")
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.module").value("super"))
+                .andExpect(jsonPath("$.messages[0].content").value("Alice super question"));
+    }
+
     private String registerAndLogin(String username) throws Exception {
         mockMvc.perform(post("/user/register")
                         .contentType(MediaType.APPLICATION_JSON)

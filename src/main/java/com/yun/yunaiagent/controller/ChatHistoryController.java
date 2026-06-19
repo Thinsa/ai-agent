@@ -32,8 +32,16 @@ public class ChatHistoryController {
     }
 
     @GetMapping("/sessions/{chatId}")
-    public ChatDtos.ConversationDetail getConversation(@PathVariable String chatId, Authentication authentication) {
-        return chatHistoryService.getConversation(chatId, currentUser(authentication));
+    public ChatDtos.ConversationDetail getConversation(
+            @PathVariable String chatId,
+            @RequestParam(required = false) String module,
+            Authentication authentication
+    ) {
+        AppUser user = currentUser(authentication);
+        if (module == null || module.isBlank()) {
+            return chatHistoryService.getConversation(chatId, user);
+        }
+        return chatHistoryService.getConversation(module, chatId, user);
     }
 
     private AppUser currentUser(Authentication authentication) {

@@ -27,13 +27,19 @@
         </label>
       </section>
 
-      <section class="panel-block">
+      <section v-if="showVision" class="panel-block">
         <div class="toggle-row">
           <div class="row-label">
             <span>视觉</span>
-            <small>暂未启用</small>
+            <small>{{ visionEnabled ? '已启用，AI 能看见图片' : '关闭后图片以文本形式传入' }}</small>
           </div>
-          <button class="switch disabled" type="button" disabled aria-label="视觉暂不可用"></button>
+          <button
+            class="switch"
+            type="button"
+            :class="{ active: visionEnabled }"
+            :aria-label="visionEnabled ? '关闭视觉功能' : '开启视觉功能'"
+            @click="$emit('update:visionEnabled', !visionEnabled)"
+          ></button>
         </div>
       </section>
 
@@ -151,6 +157,14 @@ const props = defineProps({
     default: false
   },
   knowledgeEnabled: {
+    type: Boolean,
+    default: false
+  },
+  showVision: {
+    type: Boolean,
+    default: true
+  },
+  visionEnabled: {
     type: Boolean,
     default: false
   },

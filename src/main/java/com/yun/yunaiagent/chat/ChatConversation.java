@@ -18,10 +18,10 @@ import java.time.LocalDateTime;
 @Entity
 @Table(
         name = "chat_conversation",
-        uniqueConstraints = @UniqueConstraint(name = "uk_chat_conversation_module_chat_id", columnNames = {"module", "chat_id"}),
+        uniqueConstraints = @UniqueConstraint(name = "uk_chat_conversation_module_chat_id_user", columnNames = {"module", "chat_id", "user_id"}),
         indexes = {
                 @Index(name = "idx_chat_conversation_user_module", columnList = "user_id,module"),
-                @Index(name = "idx_chat_conversation_chat_id", columnList = "chat_id")
+                @Index(name = "idx_chat_conversation_module_chat_id", columnList = "module,chat_id")
         }
 )
 public class ChatConversation {

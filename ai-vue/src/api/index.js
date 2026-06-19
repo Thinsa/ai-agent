@@ -87,6 +87,13 @@ export const listStorySaves = () =>
 export const deleteStorySave = (saveId) =>
   request.delete(`/story-saves/${saveId}`).then(res => res.data)
 
+// 文件上传
+export const uploadFile = (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/ai/upload', formData).then(res => res.data)
+}
+
 export const connectSSE = (url, params = {}, onMessage, onError) => {
   const token = getStoredToken()
   const mergedParams = token ? { ...params, token } : params
@@ -110,8 +117,10 @@ export const connectSSE = (url, params = {}, onMessage, onError) => {
   return eventSource
 }
 
-export const chatWithLoveApp = (message, chatId) => {
-  return connectSSE('/ai/love_app/chat/sse', { message, chatId })
+export const chatWithLoveApp = (message, chatId, imageUrl) => {
+  const params = { message, chatId }
+  if (imageUrl) params.imageUrl = imageUrl
+  return connectSSE('/ai/love_app/chat/sse', params)
 }
 
 export const chatWithLoveAppMcp = (message, chatId) => {
@@ -142,8 +151,10 @@ export const listChatSessions = (module) => {
   return request.get('/ai/history/sessions', { params: { module } }).then(res => res.data)
 }
 
-export const getChatHistory = (chatId) => {
-  return request.get(`/ai/history/sessions/${encodeURIComponent(chatId)}`).then(res => res.data)
+export const getChatHistory = (chatId, module) => {
+  return request.get(`/ai/history/sessions/${encodeURIComponent(chatId)}`, {
+    params: module ? { module } : {}
+  }).then(res => res.data)
 }
 
 export default {
@@ -168,5 +179,6 @@ export default {
   getChatHistory,
   createStorySave,
   listStorySaves,
-  deleteStorySave
+  deleteStorySave,
+  uploadFile
 }

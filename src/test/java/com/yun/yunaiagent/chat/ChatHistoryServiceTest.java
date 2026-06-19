@@ -55,8 +55,34 @@ class ChatHistoryServiceTest {
         assertThat(detail.messages()).extracting(ChatDtos.MessageResponse::content)
                 .containsExactly("Java 是什么？", "Java 是一种编程语言。");
 
-        assertThat(chatHistoryService.recentMessages("love", "love_abc", 20))
+        assertThat(chatHistoryService.recentMessages("love", "love_abc", 20, user))
                 .extracting(ChatMessage::getContent)
                 .containsExactly("Java 是什么？", "Java 是一种编程语言。");
+    }
+
+    @Test
+    void sameChatIdIsIsolatedPerUser() {
+        AppUser alice = userService.register(new UserDtos.RegisterRequest("same-chat-alice", "password123", "Alice", "same-chat-alice@example.com"));
+        AppUser bob = userService.register(new UserDtos.RegisterRequest("same-chat-bob", "password123", "Bob", "same-chat-bob@example.com"));
+
+        chatHistoryService.appendUserMessage("love", "default", "Alice question", alice);
+        chatHistoryService.appendAssistantMessage("love", "default", "Alice answer", alice);
+        chatHistoryService.appendUserMessage("love", "default", "Bob question", bob);
+        chatHistoryService.appendAssistantMessage("love", "default", "Bob answer", bob);
+
+        ChatDtos.ConversationDetail aliceDetail = chatHistoryService.getConversation("love", "default", alice);
+        assertThat(aliceDetail.messages()).extracting(ChatDtos.MessageResponse::content)
+                .containsExactly("Alice question", "Alice answer");
+
+        ChatDtos.ConversationDetail bobDetail = chatHistoryService.getConversation("love", "default", bob);
+        assertThat(bobDetail.messages()).extracting(ChatDtos.MessageResponse::content)
+                .containsExactly("Bob question", "Bob answer");
+
+        assertThat(chatHistoryService.recentMessages("love", "default", 20, alice))
+                .extracting(ChatMessage::getContent)
+                .containsExactly("Alice question", "Alice answer");
+        assertThat(chatHistoryService.recentMessages("love", "default", 20, bob))
+                .extracting(ChatMessage::getContent)
+                .containsExactly("Bob question", "Bob answer");
     }
 }

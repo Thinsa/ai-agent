@@ -5,6 +5,7 @@ import com.yun.yunaiagent.app.LoveApp;
 import com.yun.yunaiagent.chat.ChatHistoryService;
 import com.yun.yunaiagent.security.JwtService;
 import com.yun.yunaiagent.tools.AgentTool;
+import com.yun.yunaiagent.tools.OssObjectStorageService;
 import com.yun.yunaiagent.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ChatModel;
@@ -28,7 +29,8 @@ class AiControllerMcpTest {
                 emptyProvider(),
                 mock(UserService.class),
                 mock(JwtService.class),
-                mock(ChatHistoryService.class)
+                mock(ChatHistoryService.class),
+                mock(OssObjectStorageService.class)
         );
 
         SseEmitter emitter = controller.doChatWithManusMcp("search cat image", "mcp-test", null, null);
@@ -47,7 +49,8 @@ class AiControllerMcpTest {
                 trackingProvider,
                 mock(UserService.class),
                 mock(JwtService.class),
-                mock(ChatHistoryService.class)
+                mock(ChatHistoryService.class),
+                mock(OssObjectStorageService.class)
         );
 
         SseEmitter emitter = controller.doChatWithManus("hello", "chat-test", null, null);

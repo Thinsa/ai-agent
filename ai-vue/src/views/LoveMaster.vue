@@ -29,6 +29,7 @@
         :web-search-enabled="webSearchEnabled"
         :mcp-enabled="mcpEnabled"
         :knowledge-enabled="knowledgeEnabled"
+        :vision-enabled="visionEnabled"
         :custom-prompt="customPrompt"
         :show-knowledge="true"
         prompt-placeholder="你是一位恋爱大师，可以根据我的需求给出相关建议&#10;# 知识库&#10;请记住以下材料，它们可能对回答问题有帮助。&#10;${documents}"
@@ -36,6 +37,7 @@
         @update:web-search-enabled="webSearchEnabled = $event"
         @update:mcp-enabled="updateMcpEnabled"
         @update:knowledge-enabled="updateKnowledgeEnabled"
+        @update:vision-enabled="visionEnabled = $event"
         @update:custom-prompt="customPrompt = $event"
       />
 
@@ -94,6 +96,7 @@ const settingsOpen = ref(false)
 const webSearchEnabled = ref(false)
 const mcpEnabled = ref(false)
 const knowledgeEnabled = ref(false)
+const visionEnabled = ref(false)
 const customPrompt = ref('')
 const connectionStatus = ref('disconnected')
 const streamPaused = ref(false)
@@ -158,7 +161,7 @@ const resumeGeneration = () => {
   } else if (knowledgeEnabled.value) {
     runRagChat('请继续完成上面的回答')
   } else {
-    runStandardChat('请继续完成上面的回答')
+    runStandardChat('请继续完成上面的回答', null)
   }
 }
 
@@ -179,7 +182,7 @@ const loadHistory = async targetChatId => {
   }
   closeStream()
   connectionStatus.value = 'disconnected'
-  const detail = await getChatHistory(targetChatId)
+  const detail = await getChatHistory(targetChatId, 'love')
   chatId.value = detail.chatId
   messages.value = detail.messages.map(toPageMessage)
 }
@@ -220,11 +223,11 @@ const buildPrompt = message => {
   return parts.join('\n')
 }
 
-const runStandardChat = message => {
+const runStandardChat = (message, imageUrl) => {
   const aiMessageIndex = messages.value.length
   addMessage('', false, { modeLabel: activeModeLabel(false) })
   connectionStatus.value = 'connecting'
-  eventSource = chatWithLoveApp(buildPrompt(message), chatId.value)
+  eventSource = chatWithLoveApp(buildPrompt(message), chatId.value, imageUrl)
 
   eventSource.onmessage = event => {
     const data = event.data
@@ -291,21 +294,24 @@ const runRagChat = async message => {
   }
 }
 
-const sendMessage = async message => {
+const sendMessage = payload => {
+  const text = typeof payload === 'string' ? payload : payload.text
+  const imageUrl = typeof payload === 'string' ? null : payload.imageUrl
+
   streamPaused.value = false
-  addMessage(message, true, { modeLabel: activeModeLabel(true) })
+  addMessage(text, true, { modeLabel: activeModeLabel(true) })
   closeStream()
 
   if (mcpEnabled.value) {
-    await runMcpChat(message)
+    runMcpChat(text)
     return
   }
   if (knowledgeEnabled.value) {
-    await runRagChat(message)
+    runRagChat(text)
     return
   }
 
-  runStandardChat(message)
+  runStandardChat(text, visionEnabled.value ? imageUrl : null)
 }
 
 const goBack = () => {

@@ -27,11 +27,13 @@
         theme="super"
         :web-search-enabled="webSearchEnabled"
         :mcp-enabled="mcpEnabled"
+        :vision-enabled="visionEnabled"
         :custom-prompt="customPrompt"
         prompt-placeholder="你可以在这里添加超级智能体本轮对话的额外目标。"
         @toggle-open="settingsOpen = false"
         @update:web-search-enabled="webSearchEnabled = $event"
         @update:mcp-enabled="mcpEnabled = $event"
+        @update:vision-enabled="visionEnabled = $event"
         @update:custom-prompt="customPrompt = $event"
       />
 
@@ -90,6 +92,7 @@ const settingsOpen = ref(false)
 const webSearchEnabled = ref(false)
 const mcpEnabled = ref(false)
 const customPrompt = ref('')
+const visionEnabled = ref(false)
 const connectionStatus = ref('disconnected')
 const streamPaused = ref(false)
 const historySessions = ref([])
@@ -168,7 +171,7 @@ const loadHistory = async targetChatId => {
   }
   closeStream()
   connectionStatus.value = 'disconnected'
-  const detail = await getChatHistory(targetChatId)
+  const detail = await getChatHistory(targetChatId, 'super')
   chatId.value = detail.chatId
   messages.value = detail.messages.map(toPageMessage)
 }
@@ -241,12 +244,13 @@ const runStreamChat = (message, useMcp) => {
   }
 }
 
-const sendMessage = message => {
+const sendMessage = payload => {
+  const text = typeof payload === 'string' ? payload : payload.text
   const useMcp = mcpEnabled.value
   streamPaused.value = false
-  addMessage(message, true, { modeLabel: activeModeLabel(true) })
+  addMessage(text, true, { modeLabel: activeModeLabel(true) })
   closeStream()
-  runStreamChat(buildPrompt(message), useMcp)
+  runStreamChat(buildPrompt(text), useMcp)
 }
 
 const goBack = () => {

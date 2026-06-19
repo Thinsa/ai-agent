@@ -12,6 +12,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
+import org.springframework.ai.content.Media;
+import org.springframework.util.MimeTypeUtils;
+
+import java.net.URI;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -57,7 +61,7 @@ public class LoveApp {
     public String doChat(String message, String chatId, AppUser user) {
         String normalizedMessage = normalize(message);
         recordUserMessage(chatId, normalizedMessage, user);
-        String content = basePrompt(normalizedMessage, chatId).call().content();
+        String content = basePrompt(normalizedMessage, chatId, user).call().content();
         recordAssistantMessage(chatId, content, user);
         return content;
     }
@@ -70,11 +74,31 @@ public class LoveApp {
         String normalizedMessage = normalize(message);
         recordUserMessage(chatId, normalizedMessage, user);
         StringBuilder answer = new StringBuilder();
-        return basePrompt(normalizedMessage, chatId)
+        return basePrompt(normalizedMessage, chatId, user)
                 .stream()
                 .content()
                 .doOnNext(answer::append)
                 .doOnComplete(() -> recordAssistantMessage(chatId, answer.toString(), user));
+    }
+
+    public Flux<String> doChatByStreamWithImage(String message, String imageUrl, String chatId, AppUser user) {
+        String normalizedMessage = normalize(message);
+        recordUserMessage(chatId, "[图片] " + normalizedMessage, user);
+        StringBuilder answer = new StringBuilder();
+        return chatClient.prompt()
+                .system(systemPromptWithImage())
+                .user(userSpec -> userSpec
+                        .text(normalizedMessage)
+                        .media(new Media(MimeTypeUtils.IMAGE_PNG, URI.create(imageUrl))))
+                .stream()
+                .content()
+                .doOnNext(answer::append)
+                .doOnComplete(() -> {
+                    if (chatHistoryService != null) {
+                        chatHistoryService.appendAssistantMessage(MODULE,
+                                normalizeChatId(chatId), answer.toString(), user);
+                    }
+                });
     }
 
     public LoveReport doChatWithReport(String message, String chatId) {
@@ -99,7 +123,7 @@ public class LoveApp {
                 %s
 
                 用户问题：%s
-                """.formatted(context, normalizedMessage), chatId).call().content();
+                """.formatted(context, normalizedMessage), chatId, user).call().content();
         recordAssistantMessage(chatId, content, user);
         return content;
     }
@@ -127,13 +151,17 @@ public class LoveApp {
     }
 
     private ChatClient.ChatClientRequestSpec basePrompt(String message, String chatId) {
+        return basePrompt(message, chatId, null);
+    }
+
+    private ChatClient.ChatClientRequestSpec basePrompt(String message, String chatId, AppUser user) {
         return chatClient.prompt()
-                .system(systemPromptWithMemory(chatId))
+                .system(systemPromptWithMemory(chatId, user))
                 .user(normalize(message));
     }
 
-    private String systemPromptWithMemory(String chatId) {
-        String memory = recentMemory(chatId);
+    private String systemPromptWithMemory(String chatId, AppUser user) {
+        String memory = recentMemory(chatId, user);
         if (memory.isBlank()) {
             return SYSTEM_PROMPT;
         }
@@ -144,11 +172,19 @@ public class LoveApp {
                 """.formatted(memory);
     }
 
-    private String recentMemory(String chatId) {
+    private String systemPromptWithImage() {
+        return SYSTEM_PROMPT + """
+
+                用户可以上传图片，请仔细观察图片内容并结合图片回答用户问题。
+                如果用户提到"这张图片""这张图""图片里"等，请基于图片内容回答。
+                """;
+    }
+
+    private String recentMemory(String chatId, AppUser user) {
         if (chatHistoryService == null) {
             return "";
         }
-        return chatHistoryService.recentMessages(MODULE, normalizeChatId(chatId), MEMORY_WINDOW_SIZE)
+        return chatHistoryService.recentMessages(MODULE, normalizeChatId(chatId), MEMORY_WINDOW_SIZE, user)
                 .stream()
                 .map(message -> message.getRole() + ": " + message.getContent())
                 .collect(Collectors.joining(System.lineSeparator()));

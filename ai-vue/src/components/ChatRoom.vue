@@ -20,7 +20,7 @@
             </div>
             <!-- 选项按钮：仅最后一条 AI 消息且连接空闲时显示 -->
             <div
-              v-if="getStoryChoices(msg.content).length && connectionStatus !== 'connecting' && index === messages.length - 1"
+              v-if="getStoryChoices(msg.content).length && connectionStatus !== 'connecting' && index === latestChoiceMessageIndex"
               class="story-choices"
             >
               <button
@@ -36,7 +36,7 @@
             </div>
             <!-- 结局标记 -->
             <div
-              v-if="isStoryEnding(msg.content) && connectionStatus !== 'connecting' && index === messages.length - 1"
+              v-if="isStoryEnding(msg.content) && connectionStatus !== 'connecting' && index === latestChoiceMessageIndex"
               class="story-ending"
             >
               <span class="ending-badge">📖 故事完结</span>
@@ -92,7 +92,33 @@
     </div>
 
     <div class="chat-input-container">
+      <div v-if="$slots.inputActions" class="input-actions">
+        <slot name="inputActions"></slot>
+      </div>
+      <!-- 已上传文件提示 -->
+      <div v-if="attachedFile" class="file-attached">
+        <img v-if="attachedFile.isImage === 'true'" :src="attachedFile.imageUrl" class="file-thumb" />
+        <span v-else class="file-icon">📄</span>
+        <span class="file-name">{{ attachedFile.fileName }}</span>
+        <button type="button" class="file-remove-btn" @click="removeFile">✕</button>
+      </div>
       <div class="chat-input">
+        <input
+          ref="fileInput"
+          type="file"
+          class="file-input-hidden"
+          :disabled="uploading || connectionStatus === 'connecting'"
+          @change="handleFileSelect"
+        />
+        <button
+          type="button"
+          class="attach-btn"
+          :disabled="uploading || connectionStatus === 'connecting'"
+          :title="uploading ? '上传中...' : '上传文件'"
+          @click="fileInput?.click()"
+        >
+          {{ uploading ? '⏳' : '📎' }}
+        </button>
         <textarea
           v-model="inputMessage"
           class="input-box"
@@ -103,7 +129,7 @@
         <button
           type="button"
           class="send-button"
-          :disabled="connectionStatus === 'connecting' || !inputMessage.trim()"
+          :disabled="connectionStatus === 'connecting' || (!inputMessage.trim() && !attachedFile)"
           @click="sendMessage"
         >
           发送
@@ -117,6 +143,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import AiAvatarFallback from './AiAvatarFallback.vue'
 import { getBackground } from '../stores/bgStore'
+import { uploadFile } from '../api'
 
 const props = defineProps({
   messages: {
@@ -157,6 +184,25 @@ const bgStyle = computed(() => {
 
 const inputMessage = ref('')
 const messagesContainer = ref(null)
+const uploading = ref(false)
+const attachedFile = ref(null)
+const fileInput = ref(null)
+
+const latestChoiceMessageIndex = computed(() => {
+  for (let i = props.messages.length - 1; i >= 0; i--) {
+    const message = props.messages[i]
+    if (message?.isUser) {
+      return -1
+    }
+    if (getStoryChoices(message?.content).length || isStoryEnding(message?.content)) {
+      return i
+    }
+    if (!message?.keepsStoryChoices) {
+      return -1
+    }
+  }
+  return -1
+})
 
 const extractImageUrls = (content) => {
   if (!content) return []
@@ -214,11 +260,48 @@ const selectChoice = (number) => {
   emit('send-message', number)
 }
 
+const handleFileSelect = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+  uploading.value = true
+  try {
+    const result = await uploadFile(file)
+    attachedFile.value = { ...result, size: file.size }
+  } catch (e) {
+    alert('文件上传失败：' + (e?.response?.data?.message || e.message))
+  } finally {
+    uploading.value = false
+  }
+  event.target.value = ''
+}
+
+const removeFile = () => {
+  attachedFile.value = null
+}
+
 const sendMessage = () => {
-  if (!inputMessage.value.trim()) {
+  if (!inputMessage.value.trim() && !attachedFile.value) {
     return
   }
-  emit('send-message', inputMessage.value)
+  let message = inputMessage.value.trim()
+  let imageUrl = null
+  if (attachedFile.value) {
+    const file = attachedFile.value
+    if (file.isImage === 'true') {
+      imageUrl = file.imageUrl
+      if (!message) message = '请描述这张图片'
+    } else {
+      const fileInfo = `[上传文件: ${file.fileName}`
+      const preview = file.preview
+      if (preview) {
+        message = `${fileInfo}]\n文件内容:\n${preview}\n\n${message || '请帮我分析这个文件'}`
+      } else {
+        message = `${fileInfo} (${file.contentType})]\n${message || '请帮我处理这个文件'}`
+      }
+    }
+    attachedFile.value = null
+  }
+  emit('send-message', { text: message, imageUrl: imageUrl })
   inputMessage.value = ''
 }
 
@@ -451,16 +534,94 @@ onMounted(() => {
   border-top: 1px solid #e0e0e0;
   z-index: 100;
   position: relative;
-  height: 72px;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.file-attached {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: #f0fdf4;
+  border-bottom: 1px solid #dcfce7;
+}
+
+.file-name {
+  font-size: 12px;
+  color: #166534;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-remove-btn {
+  border: 0;
+  background: transparent;
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.file-remove-btn:hover {
+  background: #fef2f2;
+}
+
+.file-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.file-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.attach-btn {
+  border: 0;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.attach-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  transform: scale(1.1);
+}
+
+.attach-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.input-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px 0;
 }
 
 .chat-input {
   display: flex;
-  padding: 16px;
-  height: 100%;
+  padding: 12px 16px;
   box-sizing: border-box;
   align-items: center;
+  min-height: 56px;
 }
 
 .input-box {
@@ -586,7 +747,7 @@ onMounted(() => {
   }
 
   .chat-input-container {
-    height: 64px;
+    min-height: 64px;
   }
 }
 
@@ -663,4 +824,3 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 </style>
-

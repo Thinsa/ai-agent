@@ -140,7 +140,7 @@ public class ToolCallAgent extends ReActAgent {
         if (chatHistoryService == null) {
             return "";
         }
-        return chatHistoryService.recentMessages(MODULE, chatId, MEMORY_WINDOW_SIZE)
+        return chatHistoryService.recentMessages(MODULE, chatId, MEMORY_WINDOW_SIZE, user)
                 .stream()
                 .map(message -> message.getRole() + ": " + message.getContent())
                 .collect(Collectors.joining(System.lineSeparator()));

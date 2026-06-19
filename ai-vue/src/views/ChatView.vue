@@ -9,7 +9,7 @@
       </div>
     </div>
 
-    <div class="content-wrapper">
+    <div class="content-wrapper" :class="{ 'guide-open': currentMode === 'fixed' && guideOpen }">
       <ChatHistorySidebar
         :sessions="historySessions"
         :active-chat-id="chatId"
@@ -17,6 +17,17 @@
         module="chat"
         @select-session="loadHistory"
         @new-session="startNewSession"
+      />
+
+      <StoryGuidePanel
+        v-if="currentMode === 'fixed' && guideOpen"
+        :enabled="guideEnabled"
+        :endings="storyEndings"
+        :target-ending-id="targetEndingId"
+        :status="guideStatus"
+        @toggle-open="guideOpen = false"
+        @update:enabled="setGuideEnabled"
+        @update:targetEndingId="setTargetEndingId"
       />
 
       <div class="chat-area">
@@ -28,7 +39,24 @@
           @send-message="sendMessage"
           @stop-generation="stopGeneration"
           @resume-generation="resumeGeneration"
-        />
+        >
+          <template v-if="currentMode === 'fixed'" #inputActions>
+            <button
+              class="guide-toggle-button"
+              type="button"
+              :class="{ active: guideOpen || guideEnabled }"
+              :title="guideOpen ? '关闭结局引导' : '打开结局引导'"
+              :aria-label="guideOpen ? '关闭结局引导' : '打开结局引导'"
+              @click="guideOpen = !guideOpen"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2.25 5.25 5.1v5.25c0 4.35 2.76 8.46 6.75 9.9 3.99-1.44 6.75-5.55 6.75-9.9V5.1L12 2.25Z" />
+                <path d="M12 7.5v5.25l3.15 1.8" />
+              </svg>
+              <span>引导</span>
+            </button>
+          </template>
+        </ChatRoom>
       </div>
     </div>
   </div>
@@ -40,8 +68,10 @@ import { useRouter } from 'vue-router'
 import { useHead } from '@vueuse/head'
 import ChatHistorySidebar from '../components/ChatHistorySidebar.vue'
 import ChatRoom from '../components/ChatRoom.vue'
+import StoryGuidePanel from '../components/StoryGuidePanel.vue'
 import { chatStory, createStorySave, listStorySaves, deleteStorySave, getChatHistory, listChatSessions } from '../api'
-import { startStory, chooseOption, getSaveData, loadFromSave, resetStory, isAtEnding, getEndingTitle, getScriptMeta } from '../stores/fixedStoryStore'
+import { startStory, chooseOption, getSaveData, loadFromSave, resetStory, isAtEnding, getEndingTitle, getScriptMeta, getCurrentScene } from '../stores/fixedStoryStore'
+import { createGuideHint, getGuideStatus, getStoryEndings } from '../stores/storyGuide'
 
 useHead({
   title: '灵语 Spark 互动剧本 - LinkMind 灵桥',
@@ -67,6 +97,16 @@ const historyLoading = ref(false)
 let eventSource = null
 const currentMode = ref('story') // 'story' | 'fixed'
 const scriptTitle = computed(() => getScriptMeta().title)
+const guideOpen = ref(false)
+const guideEnabled = ref(false)
+const targetEndingId = ref('')
+const storyEndings = getStoryEndings()
+const guideStatus = computed(() => {
+  if (currentMode.value !== 'fixed') {
+    return { state: 'not_started' }
+  }
+  return getGuideStatus(getCurrentScene()?.id, targetEndingId.value)
+})
 
 const generateChatId = () => 'spark_' + Math.random().toString(36).slice(2, 10)
 
@@ -78,6 +118,48 @@ const addMessage = (content, isUser, extra = {}) => {
     time: Date.now(),
     ...extra
   })
+}
+
+const addGuideMessage = content => {
+  if (content) {
+    addMessage(content, false, { modeLabel: '结局引导', keepsStoryChoices: true })
+  }
+}
+
+const addGuideHintForCurrentScene = () => {
+  if (currentMode.value !== 'fixed' || !guideEnabled.value || isAtEnding()) {
+    return
+  }
+  addGuideMessage(createGuideHint(getCurrentScene()?.id, targetEndingId.value))
+}
+
+const selectedEndingTitle = computed(() => {
+  return storyEndings.find(ending => ending.id === targetEndingId.value)?.title || ''
+})
+
+const addEndingGuideResult = () => {
+  if (currentMode.value !== 'fixed' || !guideEnabled.value || !targetEndingId.value) {
+    return
+  }
+  if (selectedEndingTitle.value && getEndingTitle() !== selectedEndingTitle.value) {
+    addGuideMessage(`灵语 Spark 轻轻按灭桥灯：你已抵达「${getEndingTitle() || '其他结局'}」，不是目标「${selectedEndingTitle.value}」。可重新开始再试。`)
+  }
+}
+
+const setGuideEnabled = enabled => {
+  guideEnabled.value = enabled
+  if (enabled) {
+    if (!targetEndingId.value) {
+      addGuideMessage('灵语 Spark 低声提醒：先在引导面板中选择想抵达的结局，我再替你拨亮下一盏桥灯。')
+      return
+    }
+    addGuideHintForCurrentScene()
+  }
+}
+
+const setTargetEndingId = endingId => {
+  targetEndingId.value = endingId
+  addGuideHintForCurrentScene()
 }
 
 const toPageMessage = message => {
@@ -132,7 +214,7 @@ const loadHistory = async targetChatId => {
   }
   closeStream()
   connectionStatus.value = 'disconnected'
-  const detail = await getChatHistory(targetChatId)
+  const detail = await getChatHistory(targetChatId, 'chat')
   chatId.value = detail.chatId
   messages.value = detail.messages.map(toPageMessage)
 }
@@ -144,7 +226,9 @@ const startNewSession = () => {
   chatId.value = generateChatId()
   messages.value = []
   if (currentMode.value === 'fixed') {
-    addMessage('你好，我是灵语 Spark！已为你准备好固定剧本《灵桥异闻录》。\n\n这是一个关于灵桥、命运与选择的奇幻故事，拥有 4 种不同结局。\n\n输入「开始」进入故事，输入「存档」保存进度，输入「读档」读取存档。', false)
+    resetStory()
+    window.__storySaves = null
+    addMessage('这是一个关于灵桥、命运与选择的奇幻故事，拥有 4 种不同结局。\n\n输入「开始」进入故事，输入「存档」保存进度，输入「读档」读取存档。', false)
   } else {
     addMessage('你好，我是灵语 Spark 的互动剧本主持人！给我一个主题（如"武侠""科幻""悬疑""末日"），或者直接说"开始"，我会为你展开一段分支故事。在每个关键节点，你可以从选项中选择下一步行动，决定故事的最终结局。', false)
   }
@@ -202,18 +286,19 @@ const switchMode = mode => {
   startNewSession()
 }
 
-const sendMessage = message => {
+const sendMessage = payload => {
+  const text = typeof payload === 'string' ? payload : payload.text
   streamPaused.value = false
 
   if (currentMode.value === 'fixed') {
-    handleFixedStoryMessage(message)
+    handleFixedStoryMessage(text)
     return
   }
 
   // AI 剧本模式
-  addMessage(message, true)
+  addMessage(text, true)
   closeStream()
-  runChat(message)
+  runChat(text)
 }
 
 const handleFixedStoryMessage = message => {
@@ -248,6 +333,7 @@ const handleFixedStoryMessage = message => {
     addMessage(trimmed, true)
     const output = startStory()
     if (output) addMessage(output, false)
+    addGuideHintForCurrentScene()
     return
   }
 
@@ -259,7 +345,10 @@ const handleFixedStoryMessage = message => {
     if (output) {
       addMessage(output, false)
       if (isAtEnding()) {
-        addMessage('输入「重新开始」开启新剧本，输入「存档」保存进度。', false)
+        addEndingGuideResult()
+        addMessage('输入「重新开始」开启新剧本，输入「存档」保存进度。', false, { keepsStoryChoices: true })
+      } else {
+        addGuideHintForCurrentScene()
       }
       return
     }
@@ -310,6 +399,11 @@ const handleLoadChoice = idx => {
   if (output) {
     addMessage('✅ 已读取存档。', false)
     addMessage(output, false)
+    if (isAtEnding()) {
+      addEndingGuideResult()
+    } else {
+      addGuideHintForCurrentScene()
+    }
   }
   window.__storySaves = null
 }
@@ -397,15 +491,66 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+.guide-open .chat-area {
+  flex: 0 0 50%;
+}
+
+.guide-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 1px solid rgba(124, 58, 237, 0.24);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: rgba(124, 58, 237, 0.07);
+  color: #6d28d9;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  white-space: nowrap;
+}
+
+.guide-toggle-button:hover,
+.guide-toggle-button.active {
+  border-color: rgba(124, 58, 237, 0.55);
+  background: rgba(124, 58, 237, 0.13);
+}
+
+.guide-toggle-button:hover {
+  transform: translateY(-1px);
+}
+
+.guide-toggle-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
 @media (max-width: 768px) {
   .header { padding: 12px 16px; }
   .title { font-size: 18px; }
+
+  .content-wrapper {
+    flex-direction: column;
+  }
+
+  .guide-open .chat-area {
+    flex: 1;
+  }
 }
 
 @media (max-width: 480px) {
   .header { padding: 10px 12px; }
   .back-button { font-size: 14px; }
   .title { font-size: 16px; }
+  .guide-toggle-button span { display: none; }
 }
 
 .mode-toggle {
