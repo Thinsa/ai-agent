@@ -27,4 +27,14 @@ public final class ValidationUtils {
     public static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
+
+    /**
+     * 规范化字符串：null 或空白返回回退值，否则 trim。
+     */
+    public static String normalize(String value, String fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        return value.trim();
+    }
 }
