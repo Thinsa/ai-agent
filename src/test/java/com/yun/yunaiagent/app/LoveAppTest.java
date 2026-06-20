@@ -1,6 +1,7 @@
 package com.yun.yunaiagent.app;
 
 import com.yun.yunaiagent.chat.ChatHistoryService;
+import com.yun.yunaiagent.rag.EmptyKnowledgeDocumentRepository;
 import com.yun.yunaiagent.rag.LoveAppDocumentLoader;
 import com.yun.yunaiagent.rag.LoveAppRagService;
 import com.yun.yunaiagent.rag.QueryRewriter;
@@ -99,7 +100,7 @@ class LoveAppTest {
             public org.springframework.ai.vectorstore.VectorStore getObject() {
                 return null;
             }
-        });
+        }, new EmptyKnowledgeDocumentRepository());
     }
 
     private static class FakeChatModel implements ChatModel {

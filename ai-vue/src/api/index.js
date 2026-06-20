@@ -94,6 +94,28 @@ export const uploadFile = (file) => {
   return request.post('/ai/upload', formData).then(res => res.data)
 }
 
+// 知识库文档管理
+export const listKnowledgeDocuments = (enabledOnly = false) =>
+  request.get('/knowledge-documents', { params: { enabledOnly } }).then(res => res.data)
+
+export const getKnowledgeDocumentCount = () =>
+  request.get('/knowledge-documents/count').then(res => res.data)
+
+export const getKnowledgeCategories = () =>
+  request.get('/knowledge-documents/categories').then(res => res.data)
+
+export const createKnowledgeDocument = (data) =>
+  request.post('/knowledge-documents', data).then(res => res.data)
+
+export const updateKnowledgeDocument = (id, data) =>
+  request.put(`/knowledge-documents/${id}`, data).then(res => res.data)
+
+export const deleteKnowledgeDocument = (id) =>
+  request.delete(`/knowledge-documents/${id}`).then(res => res.data)
+
+export const reindexKnowledgeDocuments = () =>
+  request.post('/knowledge-documents/reindex').then(res => res.data)
+
 export const connectSSE = (url, params = {}, onMessage, onError) => {
   const token = getStoredToken()
   const mergedParams = token ? { ...params, token } : params
@@ -180,5 +202,12 @@ export default {
   createStorySave,
   listStorySaves,
   deleteStorySave,
-  uploadFile
+  uploadFile,
+  listKnowledgeDocuments,
+  getKnowledgeDocumentCount,
+  getKnowledgeCategories,
+  createKnowledgeDocument,
+  updateKnowledgeDocument,
+  deleteKnowledgeDocument,
+  reindexKnowledgeDocuments
 }

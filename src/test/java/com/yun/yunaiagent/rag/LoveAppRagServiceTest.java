@@ -26,7 +26,8 @@ class LoveAppRagServiceTest {
         LoveAppRagService service = new LoveAppRagService(
                 new LoveAppDocumentLoader(),
                 new QueryRewriter(new FakeChatModel()),
-                provider(vectorStore)
+                provider(vectorStore),
+                new com.yun.yunaiagent.rag.EmptyKnowledgeDocumentRepository()
         );
 
         String context = service.retrieveContext("how to communicate");
@@ -42,7 +43,8 @@ class LoveAppRagServiceTest {
         LoveAppRagService service = new LoveAppRagService(
                 new LoveAppDocumentLoader(),
                 new QueryRewriter(new FakeChatModel()),
-                provider(vectorStore)
+                provider(vectorStore),
+                new com.yun.yunaiagent.rag.EmptyKnowledgeDocumentRepository()
         );
 
         service.run(null);
@@ -50,27 +52,35 @@ class LoveAppRagServiceTest {
         assertThat(vectorStore.addedDocuments).isNotEmpty();
     }
 
+    @Test
+    void startupDoesNotIndexWhenVectorStoreMissing() {
+        LoveAppRagService service = new LoveAppRagService(
+                new LoveAppDocumentLoader(),
+                new QueryRewriter(new FakeChatModel()),
+                provider(null),
+                new com.yun.yunaiagent.rag.EmptyKnowledgeDocumentRepository()
+        );
+
+        service.run(null);
+
+        // should not throw; fallback mode
+        String context = service.retrieveContext("test");
+        assertThat(context).isNotBlank();
+    }
+
     private static ObjectProvider<VectorStore> provider(VectorStore vectorStore) {
         return new ObjectProvider<>() {
             @Override
-            public VectorStore getObject(Object... args) {
-                return vectorStore;
-            }
+            public VectorStore getObject(Object... args) { return vectorStore; }
 
             @Override
-            public VectorStore getIfAvailable() {
-                return vectorStore;
-            }
+            public VectorStore getIfAvailable() { return vectorStore; }
 
             @Override
-            public VectorStore getIfUnique() {
-                return vectorStore;
-            }
+            public VectorStore getIfUnique() { return vectorStore; }
 
             @Override
-            public VectorStore getObject() {
-                return vectorStore;
-            }
+            public VectorStore getObject() { return vectorStore; }
         };
     }
 
@@ -81,9 +91,7 @@ class LoveAppRagServiceTest {
         private SearchRequest lastRequest;
 
         @Override
-        public String getName() {
-            return "fake";
-        }
+        public String getName() { return "fake"; }
 
         @Override
         public void add(List<Document> documents) {
@@ -91,12 +99,10 @@ class LoveAppRagServiceTest {
         }
 
         @Override
-        public void delete(List<String> idList) {
-        }
+        public void delete(List<String> idList) {}
 
         @Override
-        public void delete(org.springframework.ai.vectorstore.filter.Filter.Expression filterExpression) {
-        }
+        public void delete(org.springframework.ai.vectorstore.filter.Filter.Expression filterExpression) {}
 
         @Override
         public List<Document> similaritySearch(SearchRequest request) {
@@ -118,8 +124,6 @@ class LoveAppRagServiceTest {
         }
 
         @Override
-        public ChatOptions getDefaultOptions() {
-            return null;
-        }
+        public ChatOptions getDefaultOptions() { return null; }
     }
 }

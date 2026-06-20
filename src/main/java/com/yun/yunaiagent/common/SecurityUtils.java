@@ -26,6 +26,7 @@ public final class SecurityUtils {
 
     /** 从 Authentication 解析当前用户 ID。 */
     public static Long currentUserId(Authentication authentication, UserService userService) {
+        if (authentication == null) return null;
         return userService.findByUsername(authentication.getName()).getId();
     }
 }

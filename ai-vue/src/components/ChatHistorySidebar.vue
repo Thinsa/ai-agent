@@ -61,110 +61,55 @@ const formatTime = (value) => {
 
 <style scoped>
 .history-sidebar {
-  width: 260px;
-  min-width: 260px;
-  height: 100%;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  border-radius: 8px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  width: 260px; min-width: 260px; height: 100%; min-height: 0;
+  overflow-y: auto; display: flex; flex-direction: column;
+  border-radius: var(--radius-lg);
+  background: var(--glass-card);
+  backdrop-filter: blur(var(--blur-card));
+  border: var(--border-subtle);
+  box-shadow: var(--shadow-card);
 }
 
 .history-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px;
-  color: #fff;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px; color: #fff;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
+.history-sidebar.love .history-head { background: var(--gradient-soul); }
+.history-sidebar.super .history-head { background: var(--gradient-core); }
+/* spark/default fallback */
+.history-sidebar:not(.love):not(.super) .history-head { background: var(--gradient-spark); }
 
-.history-sidebar.love .history-head {
-  background: #ff6b8b;
-}
-
-.history-sidebar.super .history-head {
-  background: #3f51b5;
-}
-
-.history-title {
-  font-weight: 800;
-  font-size: 16px;
-}
-
-.history-subtitle {
-  margin-top: 2px;
-  font-size: 12px;
-  opacity: 0.82;
-}
+.history-title { font-weight: 800; font-size: 16px; }
+.history-subtitle { margin-top: 2px; font-size: 12px; opacity: 0.82; }
 
 .new-button {
-  border: 0;
-  border-radius: 6px;
-  padding: 8px 10px;
-  color: #1f2937;
-  background: rgba(255, 255, 255, 0.9);
-  cursor: pointer;
-  font-weight: 700;
+  border: 0; border-radius: var(--radius-sm); padding: 8px 10px;
+  color: var(--color-base-0); background: rgba(255,255,255,0.9);
+  cursor: pointer; font-weight: 700;
+  transition: transform var(--duration-fast) var(--ease-out);
 }
+.new-button:hover { transform: scale(1.04); }
 
-.history-state {
-  padding: 18px 14px;
-  color: #667085;
-  font-size: 14px;
-}
+.history-state { padding: 18px 14px; color: var(--color-text-2); font-size: 14px; }
 
 .history-item {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  width: 100%;
-  padding: 12px 14px;
-  border: 0;
-  border-bottom: 1px solid #eef0f3;
-  background: #fff;
-  text-align: left;
-  cursor: pointer;
+  display: flex; flex-direction: column; gap: 5px;
+  width: 100%; padding: 12px 14px; border: 0;
+  border-bottom: var(--border-subtle);
+  background: transparent; text-align: left; cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
 }
-
-.history-item:hover,
-.history-item.active {
-  background: #f5f7fb;
-}
-
-.history-sidebar.love .history-item.active {
-  background: #fff0f4;
-}
-
-.history-sidebar.super .history-item.active {
-  background: #eef2ff;
-}
+.history-item:hover { background: rgba(255,255,255,0.04); }
+.history-item.active { background: rgba(255,255,255,0.06); }
 
 .item-title {
-  color: #1f2937;
-  font-size: 14px;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--color-text-1); font-size: 14px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-
-.item-time {
-  color: #7b8494;
-  font-size: 12px;
-}
+.item-time { color: var(--color-text-2); font-size: 12px; }
 
 @media (max-width: 900px) {
-  .history-sidebar {
-    width: 100%;
-    min-width: 0;
-    height: auto;
-    min-height: 0;
-    max-height: 220px;
-  }
+  .history-sidebar { width: 100%; min-width: 0; height: auto; min-height: 0; max-height: 220px; }
 }
 </style>

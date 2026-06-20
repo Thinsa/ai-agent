@@ -15,6 +15,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 恋爱应用 RAG 服务。
+ *
+ * <p>支持双源文档加载：classpath 静态文档 + 数据库自定义文档。
+ * 启动时自动索引，CRUD 操作后可通过 {@link #reindexAll()} 触发重索引。</p>
+ */
 @Component
 public class LoveAppRagService implements ApplicationRunner {
 
@@ -26,10 +32,15 @@ public class LoveAppRagService implements ApplicationRunner {
 
     private final ObjectProvider<VectorStore> vectorStoreProvider;
 
-    public LoveAppRagService(LoveAppDocumentLoader documentLoader, QueryRewriter queryRewriter, ObjectProvider<VectorStore> vectorStoreProvider) {
+    private final KnowledgeDocumentRepository documentRepository;
+
+    public LoveAppRagService(LoveAppDocumentLoader documentLoader, QueryRewriter queryRewriter,
+                             ObjectProvider<VectorStore> vectorStoreProvider,
+                             KnowledgeDocumentRepository documentRepository) {
         this.documentLoader = documentLoader;
         this.queryRewriter = queryRewriter;
         this.vectorStoreProvider = vectorStoreProvider;
+        this.documentRepository = documentRepository;
     }
 
     @Override
@@ -40,7 +51,7 @@ public class LoveAppRagService implements ApplicationRunner {
             return;
         }
         try {
-            List<Document> documents = toVectorDocuments(documentLoader.loadDocuments());
+            List<Document> documents = loadAllDocumentsForIndex();
             if (!documents.isEmpty()) {
                 vectorStore.add(documents);
                 log.info("Loaded {} LoveApp RAG documents into vector store.", documents.size());
@@ -50,10 +61,40 @@ public class LoveAppRagService implements ApplicationRunner {
         }
     }
 
+    /**
+     * 全量重索引：删除现有向量后重新加载 classpath + 启用的自定义文档。
+     */
+    public void reindexAll() {
+        VectorStore vectorStore = vectorStoreProvider.getIfAvailable();
+        if (vectorStore == null) {
+            log.warn("Cannot reindex: vector store is not available.");
+            return;
+        }
+        try {
+            // 删除所有现有向量（Spring AI PGVector 不支持按条件删除，所以全删）
+            // 生产环境可优化为按 source 批量删除
+            List<Document> classpathDocs = toVectorDocuments(documentLoader.loadDocuments());
+            List<String> ids = classpathDocs.stream()
+                    .map(Document::getId)
+                    .toList();
+            if (!ids.isEmpty()) {
+                vectorStore.delete(ids);
+            }
+            // 重新加载并索引
+            List<Document> allDocs = loadAllDocumentsForIndex();
+            if (!allDocs.isEmpty()) {
+                vectorStore.add(allDocs);
+                log.info("Reindexed {} LoveApp RAG documents.", allDocs.size());
+            }
+        } catch (Exception e) {
+            log.warn("LoveApp RAG reindex failed: {}", e.getMessage());
+        }
+    }
+
     public String retrieveContext(String query) {
         VectorStore vectorStore = vectorStoreProvider.getIfAvailable();
         if (vectorStore == null) {
-            return String.join(System.lineSeparator(), documentLoader.loadDocuments());
+            return loadFallbackDocuments();
         }
         try {
             String rewrittenQuery = queryRewriter.rewrite(query);
@@ -64,7 +105,7 @@ public class LoveAppRagService implements ApplicationRunner {
                     .build();
             List<Document> matches = vectorStore.similaritySearch(request);
             if (matches == null || matches.isEmpty()) {
-                return String.join(System.lineSeparator(), documentLoader.loadDocuments());
+                return loadFallbackDocuments();
             }
             return matches.stream()
                     .map(Document::getText)
@@ -72,21 +113,64 @@ public class LoveAppRagService implements ApplicationRunner {
                     .orElse("");
         } catch (Exception e) {
             return "RAG retrieval failed: " + e.getMessage() + System.lineSeparator()
-                    + String.join(System.lineSeparator(), documentLoader.loadDocuments());
+                    + loadFallbackDocuments();
         }
     }
 
-    private List<Document> toVectorDocuments(List<String> rawDocuments) {
+    /**
+     * 合并 classpath + 启用的自定义文档，准备索引。
+     */
+    private List<Document> loadAllDocumentsForIndex() {
+        List<LoadableDocument> classpathDocs = documentLoader.loadDocuments();
+        List<KnowledgeDocument> customDocs = documentRepository.findByEnabledTrue();
+
+        List<LoadableDocument> all = new ArrayList<>(classpathDocs);
+        for (KnowledgeDocument doc : customDocs) {
+            all.add(new LoadableDocument(
+                    "custom:" + doc.getId(),
+                    doc.getTitle(),
+                    doc.getContent(),
+                    "custom",
+                    doc.getCategory()
+            ));
+        }
+        return toVectorDocuments(all);
+    }
+
+    /**
+     * 构造降级回退的文档文本（VectorStore 不可用时使用）。
+     */
+    private String loadFallbackDocuments() {
+        List<LoadableDocument> classpathDocs = documentLoader.loadDocuments();
+        List<KnowledgeDocument> customDocs = documentRepository.findByEnabledTrue();
+
+        StringBuilder sb = new StringBuilder();
+        for (LoadableDocument doc : classpathDocs) {
+            sb.append(doc.content()).append(System.lineSeparator());
+        }
+        for (KnowledgeDocument doc : customDocs) {
+            sb.append(doc.getContent()).append(System.lineSeparator());
+        }
+        return sb.toString().trim();
+    }
+
+    private List<Document> toVectorDocuments(List<LoadableDocument> sources) {
         List<Document> documents = new ArrayList<>();
-        for (int i = 0; i < rawDocuments.size(); i++) {
-            String content = rawDocuments.get(i);
-            if (content == null || content.isBlank()) {
+        for (int i = 0; i < sources.size(); i++) {
+            LoadableDocument src = sources.get(i);
+            if (src.content() == null || src.content().isBlank()) {
                 continue;
             }
             Map<String, Object> metadata = new LinkedHashMap<>();
-            metadata.put("source", "classpath:document");
+            metadata.put("source", src.source());
             metadata.put("index", i);
-            documents.add(new Document("love-app-doc-" + i, content, metadata));
+            metadata.put("title", src.title());
+            metadata.put("category", src.category());
+            if (src.docId() != null) {
+                metadata.put("docId", src.docId());
+            }
+            String docId = src.docId() != null ? src.docId() : "love-doc-" + i;
+            documents.add(new Document(docId, src.content(), metadata));
         }
         return documents;
     }

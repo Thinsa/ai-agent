@@ -1,53 +1,178 @@
-﻿<template>
+<template>
   <main class="login-page">
-    <section class="login-shell">
-      <div class="brand-panel">
-        <div class="brand-mark">LM</div>
-        <p class="eyebrow">LinkMind 灵桥</p>
-        <h1>登录灵桥智能体平台</h1>
-        <p class="brand-copy">进入后可体验知心 Soul（情感伴侣）与极智 Core（全能助手），并管理你的用户资料。</p>
-        <div class="signal-list" aria-label="登录页功能说明">
-          <span>账号登录</span>
-          <span>资料管理</span>
-          <span>JWT 鉴权</span>
+    <!-- 深层星空背景 -->
+    <div class="space-bg">
+      <div class="nebula n1"></div>
+      <div class="nebula n2"></div>
+      <div class="nebula n3"></div>
+      <div class="nebula n4"></div>
+    </div>
+
+    <!-- 漂浮光点 -->
+    <div class="constellation" aria-hidden="true">
+      <i v-for="n in 40" :key="n" class="star-dot" :style="starStyle(n)"></i>
+      <!-- 连线 (装饰性 SVG 线) -->
+      <svg class="constellation-lines" viewBox="0 0 1440 900" preserveAspectRatio="none">
+        <line x1="12%" y1="18%" x2="28%" y2="35%" />
+        <line x1="28%" y1="35%" x2="45%" y2="22%" />
+        <line x1="68%" y1="15%" x2="82%" y2="40%" />
+        <line x1="82%" y1="40%" x2="75%" y2="60%" />
+        <line x1="20%" y1="65%" x2="35%" y2="78%" />
+        <line x1="55%" y1="80%" x2="70%" y2="68%" />
+      </svg>
+    </div>
+
+    <div class="layout-grid">
+      <!-- ═══ 左侧：品牌殿堂 ═══ -->
+      <div class="brand-temple">
+        <!-- 巨型光晕 portal -->
+        <div class="portal-glow"></div>
+        <div class="portal-ring r1"></div>
+        <div class="portal-ring r2"></div>
+        <div class="portal-ring r3"></div>
+
+        <!-- 桥形徽标 -->
+        <div class="brand-icon-box">
+          <svg class="brand-icon-main" viewBox="0 0 80 80" fill="none">
+            <!-- 拱桥 -->
+            <path d="M12 62 C12 38, 22 18, 52 18 C42 30, 38 40, 52 64 C34 64, 22 62, 12 62Z"
+                  fill="url(#bridgeGrad)" opacity="0.95"/>
+            <!-- 桥塔 -->
+            <rect x="46" y="18" width="5" height="20" rx="2" fill="url(#bridgeGrad)" opacity="0.6"/>
+            <rect x="38" y="18" width="5" height="14" rx="2" fill="url(#bridgeGrad)" opacity="0.4"/>
+            <!-- 吊索 -->
+            <line x1="48" y1="18" x2="30" y2="44" stroke="url(#bridgeGrad)" stroke-width="1" opacity="0.35"/>
+            <line x1="48" y1="18" x2="52" y2="46" stroke="url(#bridgeGrad)" stroke-width="1" opacity="0.35"/>
+            <line x1="48" y1="18" x2="38" y2="38" stroke="url(#bridgeGrad)" stroke-width="0.8" opacity="0.25"/>
+            <!-- 星光终点 -->
+            <circle cx="52" cy="64" r="3.5" fill="var(--color-glow)" opacity="0.9"/>
+            <circle cx="12" cy="62" r="2.5" fill="var(--color-glow)" opacity="0.6"/>
+            <defs>
+              <linearGradient id="bridgeGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%"   stop-color="var(--color-aurora-3)"/>
+                <stop offset="50%"  stop-color="var(--color-glow)"/>
+                <stop offset="100%" stop-color="var(--color-aurora-1)"/>
+              </linearGradient>
+            </defs>
+          </svg>
         </div>
+
+        <p class="brand-pre">LinkMind</p>
+        <h1 class="brand-title-main">灵 桥</h1>
+        <p class="brand-slogan">心与智之间，搭一座桥</p>
+
+        <!-- 底部品牌理念 -->
+        <div class="brand-belief">
+          <div class="belief-item">
+            <span class="belief-dot"></span>
+            <span>知心 Soul · 情感陪伴</span>
+          </div>
+          <div class="belief-item">
+            <span class="belief-dot" style="--dot-color: var(--color-aurora-2);"></span>
+            <span>灵语 Spark · 互动叙事</span>
+          </div>
+          <div class="belief-item">
+            <span class="belief-dot" style="--dot-color: var(--color-aurora-1);"></span>
+            <span>极智 Core · 全能助手</span>
+          </div>
+        </div>
+
+        <!-- 底部光弧 -->
+        <div class="temple-arc"></div>
       </div>
 
-      <form class="login-card" @submit.prevent="handleSubmit">
-        <div class="form-heading">
-          <h2>{{ isRegisterMode ? '创建账号' : '欢迎回来' }}</h2>
-          <p>{{ isRegisterMode ? '先注册账号，再进入智能体应用平台。' : '使用已注册账号登录后端服务。' }}</p>
+      <!-- ═══ 右侧：登录泊口 ═══ -->
+      <div class="dock-panel">
+        <div class="dock-inner">
+          <!-- 泊口标志 -->
+          <div class="dock-badge">
+            <div class="badge-light"></div>
+            <span>{{ isRegisterMode ? 'REGISTER' : 'LOGIN' }}</span>
+          </div>
+
+          <h2 class="dock-title">{{ isRegisterMode ? '创建你的身份' : '欢迎回到灵桥' }}</h2>
+          <p class="dock-subtitle">
+            {{ isRegisterMode ? '注册后即可使用全部智能体服务' : '连接智慧，点亮灵感' }}
+          </p>
+
+          <form class="dock-form" @submit.prevent="handleSubmit">
+            <div class="dock-field">
+              <span class="dock-field-label">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="9" cy="6" r="3"/><path d="M2 16c0-3.3 2.7-6 7-6s7 2.7 7 6"/></svg>
+                用户名
+              </span>
+              <div class="dock-input-wrap">
+                <input id="username" v-model.trim="form.username" type="text" autocomplete="username" placeholder="输入你的用户名" required />
+                <span class="input-underline"></span>
+              </div>
+            </div>
+
+            <template v-if="isRegisterMode">
+              <div class="dock-field">
+                <span class="dock-field-label">
+                  <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM3 16v-.5A6 6 0 0 1 15 15.5V16"/></svg>
+                  昵称
+                </span>
+                <div class="dock-input-wrap">
+                  <input id="displayName" v-model.trim="form.displayName" type="text" autocomplete="name" placeholder="你希望别人怎么称呼你" />
+                  <span class="input-underline"></span>
+                </div>
+              </div>
+
+              <div class="dock-field">
+                <span class="dock-field-label">
+                  <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3" width="14" height="12" rx="2"/><path d="m2 5 7 5 7-5"/></svg>
+                  邮箱
+                </span>
+                <div class="dock-input-wrap">
+                  <input id="email" v-model.trim="form.email" type="email" autocomplete="email" placeholder="your@email.com" />
+                  <span class="input-underline"></span>
+                </div>
+              </div>
+            </template>
+
+            <div class="dock-field">
+              <span class="dock-field-label">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="8" width="13" height="8" rx="2"/><path d="M5.5 8V4.5a3.5 3.5 0 0 1 7 0V8"/><circle cx="9" cy="12.5" r="1.2"/></svg>
+                密码
+              </span>
+              <div class="dock-input-wrap">
+                <input id="password" v-model="form.password" type="password" autocomplete="current-password" placeholder="······" required />
+                <span class="input-underline"></span>
+              </div>
+            </div>
+
+            <!-- 错误提示 -->
+            <div v-if="errorMessage" class="dock-error">
+              <svg viewBox="0 0 18 18" fill="currentColor"><path d="M9 1.5a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15Zm0 2.5a1 1 0 0 1 1 1v4a1 1 0 0 1-2 0V5a1 1 0 0 1 1-1Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>
+              {{ errorMessage }}
+            </div>
+
+            <!-- 提交按钮 -->
+            <button class="dock-submit" type="submit" :disabled="loading">
+              <span v-if="loading" class="btn-loading">
+                <i class="spinner"></i>处理中...
+              </span>
+              <span v-else class="btn-content">
+                {{ isRegisterMode ? '注册并进入' : '进入灵桥' }}
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10h12M11 4l6 6-6 6"/></svg>
+              </span>
+            </button>
+          </form>
+
+          <!-- 切换模式 -->
+          <button class="dock-switch" type="button" :disabled="loading" @click="toggleMode">
+            {{ isRegisterMode ? '已有账号？去登录' : '新用户？创建账号' }}
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" class="switch-icon"><path d="M6 3l5 5-5 5"/></svg>
+          </button>
+
+          <!-- 底部装饰线 -->
+          <div class="dock-footer">
+            <span></span><span>LinkMind © 2026</span><span></span>
+          </div>
         </div>
-
-        <label class="form-field" for="username">
-          <span>用户名</span>
-          <input id="username" v-model.trim="form.username" type="text" autocomplete="username" placeholder="请输入用户名" required />
-        </label>
-
-        <label v-if="isRegisterMode" class="form-field" for="displayName">
-          <span>昵称</span>
-          <input id="displayName" v-model.trim="form.displayName" type="text" autocomplete="name" placeholder="请输入昵称" />
-        </label>
-
-        <label v-if="isRegisterMode" class="form-field" for="email">
-          <span>邮箱</span>
-          <input id="email" v-model.trim="form.email" type="email" autocomplete="email" placeholder="请输入邮箱" />
-        </label>
-
-        <label class="form-field" for="password">
-          <span>密码</span>
-          <input id="password" v-model="form.password" type="password" autocomplete="current-password" placeholder="请输入密码" required />
-        </label>
-
-        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-
-        <button class="primary-button" type="submit" :disabled="loading">{{ loading ? '处理中...' : (isRegisterMode ? '注册并登录' : '登录') }}</button>
-
-        <button class="ghost-button" type="button" :disabled="loading" @click="toggleMode">
-          {{ isRegisterMode ? '已有账号，去登录' : '没有账号，先注册' }}
-        </button>
-      </form>
-    </section>
+      </div>
+    </div>
   </main>
 </template>
 
@@ -58,11 +183,11 @@ import { useHead } from '@vueuse/head'
 import { login, register } from '../stores/userStore'
 
 useHead({
-  title: '登录 - AI超级智能体应用平台',
+  title: '登录 - LinkMind 灵桥',
   meta: [
     {
       name: 'description',
-      content: 'AI超级智能体应用平台登录页面'
+      content: 'LinkMind 灵桥 — 心与智之间，搭一座桥。'
     }
   ]
 })
@@ -87,7 +212,6 @@ const handleSubmit = async () => {
     errorMessage.value = '请输入用户名和密码'
     return
   }
-
   loading.value = true
   errorMessage.value = ''
   try {
@@ -99,10 +223,7 @@ const handleSubmit = async () => {
         email: form.email
       })
     }
-    await login({
-      username: form.username,
-      password: form.password
-    })
+    await login({ username: form.username, password: form.password })
     router.push('/')
   } catch (error) {
     errorMessage.value = getErrorMessage(error)
@@ -115,217 +236,576 @@ const toggleMode = () => {
   isRegisterMode.value = !isRegisterMode.value
   errorMessage.value = ''
 }
+
+const starStyle = (n) => {
+  const angle = (n / 40) * 360
+  const radius = 20 + Math.random() * 45
+  const x = 50 + Math.cos(angle * Math.PI / 180) * radius
+  const y = 50 + Math.sin(angle * Math.PI / 180) * radius
+  const size = 1 + Math.random() * 2.5
+  const delay = Math.random() * 12
+  const duration = 3 + Math.random() * 7
+  return {
+    left: `${x}%`,
+    top: `${y}%`,
+    width: `${size}px`,
+    height: `${size}px`,
+    animationDelay: `${delay}s`,
+    animationDuration: `${duration}s`,
+    opacity: 0.2 + Math.random() * 0.6
+  }
+}
 </script>
 
 <style scoped>
+/* ═══════════════════════════════════════════════
+   LOGIN — COSMIC PORTAL LAYOUT
+   ═══════════════════════════════════════════════ */
+
 .login-page {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 32px 20px;
-  color: #eef7ff;
-  background:
-    linear-gradient(135deg, rgba(3, 8, 22, 0.96), rgba(14, 18, 42, 0.94)),
-    radial-gradient(circle at 16% 20%, rgba(0, 178, 255, 0.24), transparent 28%),
-    radial-gradient(circle at 84% 75%, rgba(255, 77, 141, 0.2), transparent 30%);
-}
-
-.login-shell {
-  width: min(1040px, 100%);
-  display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 28px;
-  align-items: stretch;
-}
-
-.brand-panel,
-.login-card {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(10, 17, 36, 0.78);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
-  backdrop-filter: blur(16px);
-}
-
-.brand-panel {
-  min-height: 520px;
-  padding: 48px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background: #080c16;
 }
 
-.brand-mark {
-  width: 66px;
-  height: 66px;
+/* ═══════ 星空背景 ═══════ */
+.space-bg {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+}
+.nebula {
+  position: absolute; border-radius: 50%; filter: blur(150px);
+  animation: nebula-drift 30s var(--ease-in-out) infinite;
+}
+.nebula.n1 {
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(180,160,232,0.22), transparent 70%);
+  top: -10%; left: -8%; animation-delay: 0s;
+}
+.nebula.n2 {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(126,200,224,0.15), transparent 70%);
+  bottom: -15%; left: 30%; animation-delay: -10s;
+}
+.nebula.n3 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(240,192,96,0.10), transparent 70%);
+  top: 40%; right: -5%; animation-delay: -20s;
+}
+.nebula.n4 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(240,144,160,0.08), transparent 70%);
+  top: 60%; left: 10%; animation-delay: -5s;
+}
+@keyframes nebula-drift {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(20px,-20px) scale(1.05); }
+  66% { transform: translate(-15px,15px) scale(0.95); }
+}
+
+/* ═══════ 星座光点 ═══════ */
+.constellation {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+}
+.star-dot {
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+  animation: star-twinkle 5s var(--ease-in-out) infinite;
+}
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+.constellation-lines {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+.constellation-lines line {
+  stroke: rgba(255,255,255,0.04);
+  stroke-width: 0.5;
+}
+
+/* ═══════ 双栏布局 ═══════ */
+.layout-grid {
   display: grid;
-  place-items: center;
-  border-radius: 18px;
-  margin-bottom: 28px;
-  color: #06111f;
-  font-weight: 900;
-  letter-spacing: 0;
-  background: linear-gradient(135deg, #00f0ff, #7c3aed 58%, #ff4d8d);
-}
-
-.eyebrow {
-  margin: 0 0 10px;
-  color: #68e8ff;
-  font-size: 0.9rem;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.brand-panel h1,
-.form-heading h2 {
-  margin: 0;
-  letter-spacing: 0;
-}
-
-.brand-panel h1 {
-  max-width: 520px;
-  font-size: 3rem;
-  line-height: 1.12;
-}
-
-.brand-copy {
-  max-width: 520px;
-  margin: 22px 0 0;
-  color: rgba(238, 247, 255, 0.72);
-  font-size: 1rem;
-  line-height: 1.8;
-}
-
-.signal-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 34px;
-}
-
-.signal-list span {
-  padding: 8px 12px;
-  border: 1px solid rgba(104, 232, 255, 0.28);
-  color: #bcefff;
-  background: rgba(0, 178, 255, 0.08);
-  font-size: 0.9rem;
-}
-
-.login-card {
-  padding: 42px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.form-heading {
-  margin-bottom: 28px;
-}
-
-.form-heading h2 {
-  font-size: 2rem;
-}
-
-.form-heading p {
-  margin: 10px 0 0;
-  color: rgba(238, 247, 255, 0.66);
-  line-height: 1.7;
-}
-
-.form-field {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 18px;
-  color: rgba(238, 247, 255, 0.82);
-  text-align: left;
-}
-
-.form-field input {
+  grid-template-columns: 1fr 1fr;
   width: 100%;
-  min-height: 48px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  padding: 0 14px;
-  font-size: 1rem;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  min-height: 100vh;
+  position: relative;
+  z-index: 2;
 }
 
-.form-field input:focus {
-  border-color: #68e8ff;
-  box-shadow: 0 0 0 3px rgba(104, 232, 255, 0.16);
+/* ═══════════════════════════════════
+   左侧：品牌殿堂
+   ═══════════════════════════════════ */
+.brand-temple {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 60px 40px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 35% 50%, rgba(180,160,232,0.06), transparent 60%),
+    radial-gradient(ellipse at 65% 50%, rgba(126,200,224,0.04), transparent 60%);
 }
 
-.error-message {
-  margin: 0 0 16px;
-  color: #ff9ab7;
+/* Portal 光环 */
+.portal-glow {
+  position: absolute;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(240,192,96,0.04), transparent 60%);
+  top: 22%; left: 50%;
+  transform: translateX(-50%);
+  filter: blur(40px);
+  animation: portal-breathe 6s var(--ease-in-out) infinite;
+}
+@keyframes portal-breathe {
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.6; }
+  50% { transform: translateX(-50%) scale(1.3); opacity: 1; }
 }
 
-.primary-button,
-.ghost-button {
-  min-height: 48px;
-  border: 0;
-  font-size: 1rem;
+.portal-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(240,192,96,0.06);
+  top: 50%; left: 50%;
+  animation: ring-expand 8s var(--ease-in-out) infinite;
+}
+.portal-ring.r1 {
+  width: 280px; height: 280px;
+  margin: -140px 0 0 -140px;
+}
+.portal-ring.r2 {
+  width: 360px; height: 360px;
+  margin: -180px 0 0 -180px;
+  animation-delay: -2.5s;
+  border-color: rgba(180,160,232,0.05);
+}
+.portal-ring.r3 {
+  width: 200px; height: 200px;
+  margin: -100px 0 0 -100px;
+  animation-delay: -5s;
+  border-color: rgba(126,200,224,0.05);
+}
+@keyframes ring-expand {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.12); opacity: 0.8; }
+}
+
+/* 品牌图标 */
+.brand-icon-box {
+  width: 120px; height: 120px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  z-index: 3;
+  margin-bottom: 24px;
+  filter: drop-shadow(0 0 40px rgba(240,192,96,0.10));
+  animation: icon-float 5s var(--ease-in-out) infinite;
+}
+@keyframes icon-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.brand-icon-main {
+  width: 100%; height: 100%;
+}
+
+.brand-pre {
+  font-size: 0.75rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--color-text-2);
+  margin: 0 0 4px;
+  position: relative; z-index: 3;
+  font-weight: 500;
+}
+
+.brand-title-main {
+  font-family: var(--font-display);
+  font-size: 5.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--color-aurora-3), var(--color-glow), var(--color-aurora-1));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 10px;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  position: relative; z-index: 3;
+}
+
+.brand-slogan {
+  font-size: 0.95rem;
+  color: var(--color-text-2);
+  letter-spacing: 0.15em;
+  margin: 0 0 48px;
+  position: relative; z-index: 3;
+  font-weight: 400;
+}
+
+/* 品牌理念列表 */
+.brand-belief {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative; z-index: 3;
+}
+.belief-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--color-text-2);
+  letter-spacing: 0.03em;
+}
+.belief-dot {
+  --dot-color: var(--color-aurora-3);
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--dot-color);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.temple-arc {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+}
+
+/* ═══════════════════════════════════
+   右侧：登录泊口
+   ═══════════════════════════════════ */
+.dock-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  position: relative;
+  background:
+    radial-gradient(ellipse at 40% 50%, rgba(240,192,96,0.03), transparent 50%);
+}
+.dock-panel::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 10%; bottom: 10%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(255,255,255,0.04), transparent);
+}
+
+.dock-inner {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.dock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 999px;
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  color: var(--color-text-2);
+  background: rgba(255,255,255,0.02);
+  margin-bottom: 28px;
+  align-self: flex-start;
+}
+.badge-light {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #7ec8a0;
+  animation: badge-pulse 2s var(--ease-in-out) infinite;
+}
+@keyframes badge-pulse {
+  0%, 100% { opacity: 0.4; box-shadow: 0 0 4px #7ec8a0; }
+  50% { opacity: 1; box-shadow: 0 0 8px #7ec8a0; }
+}
+
+.dock-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
   font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  color: var(--color-text-1);
+  margin: 0 0 8px;
+  letter-spacing: 0.02em;
+}
+.dock-subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-2);
+  margin: 0 0 36px;
+  line-height: 1.5;
 }
 
-.primary-button {
-  color: #06111f;
-  background: linear-gradient(90deg, #00f0ff, #7cdbff);
-  box-shadow: 0 12px 34px rgba(0, 178, 255, 0.26);
+/* ── 表单 ── */
+.dock-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
-.ghost-button {
-  margin-top: 12px;
-  color: #bcefff;
+/* 字段 */
+.dock-field {
+  margin-bottom: 20px;
+}
+.dock-field-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--color-text-2);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.dock-field-label svg {
+  width: 14px; height: 14px;
+  opacity: 0.4;
+}
+
+.dock-input-wrap {
+  position: relative;
+}
+.dock-input-wrap input {
+  width: 100%;
+  height: 50px;
+  padding: 0 0 0 2px;
+  font-size: 1rem;
+  font-family: var(--font-body);
+  color: var(--color-text-1);
   background: transparent;
-  border: 1px solid rgba(104, 232, 255, 0.24);
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  outline: none;
+  transition: border-color 0.3s var(--ease-out);
+  letter-spacing: 0.02em;
+}
+.dock-input-wrap input::placeholder {
+  color: var(--color-text-3);
+  font-weight: 300;
+  font-size: 0.92rem;
+}
+.dock-input-wrap input:focus {
+  border-bottom-color: rgba(240,192,96,0.20);
 }
 
-.primary-button:hover,
-.ghost-button:hover {
-  transform: translateY(-2px);
+/* 底部发光条 */
+.input-underline {
+  position: absolute;
+  bottom: 0; left: 50%;
+  width: 0; height: 1px;
+  background: linear-gradient(90deg, var(--color-glow), var(--color-aurora-1));
+  border-radius: 1px;
+  transition: width 0.4s var(--ease-out), left 0.4s var(--ease-out);
+  pointer-events: none;
+  opacity: 0;
+}
+.dock-input-wrap input:focus ~ .input-underline {
+  width: 100%;
+  left: 0;
+  opacity: 0.6;
 }
 
-.primary-button:focus-visible,
-.ghost-button:focus-visible {
-  outline: 3px solid rgba(104, 232, 255, 0.36);
+/* 调试模式下占位符计数修复 */
+.dock-input-wrap input:-webkit-autofill,
+.dock-input-wrap input:-webkit-autofill:hover,
+.dock-input-wrap input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-text-1);
+  -webkit-box-shadow: 0 0 0 30px #080c16 inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ── 错误 ── */
+.dock-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin: 4px 0 16px;
+  font-size: 0.82rem;
+  color: #f0a0a0;
+  background: rgba(240,120,120,0.04);
+  border: 1px solid rgba(240,120,120,0.08);
+  border-radius: 8px;
+  line-height: 1.4;
+}
+.dock-error svg {
+  width: 16px; height: 16px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* ── 提交按钮 ── */
+.dock-submit {
+  width: 100%;
+  height: 50px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  color: #080c16;
+  background: linear-gradient(135deg, #f0c060 30%, var(--color-aurora-1));
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s var(--ease-out),
+              box-shadow 0.2s var(--ease-out),
+              filter 0.2s var(--ease-out);
+}
+.dock-submit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent 60%);
+  pointer-events: none;
+}
+.dock-submit::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -75%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.5s var(--ease-out);
+  pointer-events: none;
+}
+.dock-submit:hover:not(:disabled)::after { left: 150%; }
+.dock-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(240,192,96,0.18), 0 0 60px rgba(240,192,96,0.04);
+  filter: brightness(1.05);
+}
+.dock-submit:active:not(:disabled) { transform: translateY(0); }
+.dock-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+.dock-submit:focus-visible {
+  outline: 2px solid rgba(240,192,96,0.25);
   outline-offset: 2px;
 }
 
-@media (max-width: 820px) {
-  .login-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .brand-panel {
-    min-height: auto;
-    padding: 34px;
-  }
-
-  .brand-panel h1 {
-    font-size: 2.25rem;
-  }
-
-  .login-card {
-    padding: 30px;
-  }
+.btn-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-content svg {
+  width: 16px; height: 16px;
+  transition: transform 0.25s var(--ease-out);
+}
+.dock-submit:hover:not(:disabled) .btn-content svg {
+  transform: translateX(4px);
 }
 
-@media (max-width: 480px) {
-  .login-page {
-    padding: 18px;
-  }
+.btn-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(8,12,22,0.15);
+  border-top: 2px solid #080c16;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  .brand-panel,
-  .login-card {
-    padding: 24px;
-  }
+/* ── 切换按钮 ── */
+.dock-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 20px;
+  padding: 10px;
+  background: none;
+  border: none;
+  font-size: 0.82rem;
+  font-family: var(--font-body);
+  color: var(--color-text-2);
+  cursor: pointer;
+  transition: color 0.25s var(--ease-out), gap 0.25s var(--ease-out);
+  align-self: flex-start;
+}
+.dock-switch:hover:not(:disabled) {
+  color: var(--color-glow);
+  gap: 10px;
+}
+.dock-switch:disabled { opacity: 0.35; cursor: not-allowed; }
+.dock-switch:focus-visible {
+  outline: 2px solid rgba(240,192,96,0.15);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.switch-icon {
+  width: 14px; height: 14px;
+  transition: transform 0.25s var(--ease-out);
+}
+.dock-switch:hover:not(:disabled) .switch-icon {
+  transform: translateX(3px);
+}
 
-  .brand-panel h1 {
-    font-size: 1.85rem;
+/* ── 底部 ── */
+.dock-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 40px;
+}
+.dock-footer span:first-child,
+.dock-footer span:last-child {
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.03);
+}
+.dock-footer span:nth-child(2) {
+  font-size: 0.65rem;
+  color: var(--color-text-3);
+  white-space: nowrap;
+  letter-spacing: 0.08em;
+}
+
+/* ═══════════════════════════════════
+   响应式
+   ═══════════════════════════════════ */
+@media (max-width: 860px) {
+  .layout-grid {
+    grid-template-columns: 1fr;
   }
+  .brand-temple {
+    padding: 50px 30px 30px;
+    min-height: auto;
+  }
+  .brand-title-main {
+    font-size: 3.8rem;
+  }
+  .portal-ring.r1 { width: 200px; height: 200px; margin: -100px 0 0 -100px; }
+  .portal-ring.r2 { width: 260px; height: 260px; margin: -130px 0 0 -130px; }
+  .portal-ring.r3 { width: 140px; height: 140px; margin: -70px 0 0 -70px; }
+  .brand-belief { display: none; }
+  .temple-arc { display: none; }
+  .dock-panel::before { display: none; }
+  .dock-panel { padding: 30px; }
+}
+
+@media (max-width: 520px) {
+  .brand-temple { padding: 40px 20px 20px; }
+  .brand-title-main { font-size: 2.8rem; letter-spacing: 0.08em; }
+  .brand-icon-box { width: 90px; height: 90px; margin-bottom: 16px; }
+  .brand-slogan { font-size: 0.82rem; margin-bottom: 0; }
+  .dock-panel { padding: 24px 20px; }
+  .dock-title { font-size: 1.3rem; }
+  .portal-glow { width: 240px; height: 240px; }
 }
 </style>

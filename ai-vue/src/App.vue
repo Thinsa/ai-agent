@@ -6,6 +6,8 @@
 </template>
 
 <style>
+@import './styles/tokens.css';
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -13,13 +15,15 @@
 }
 
 html, body {
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   font-size: 16px;
-  color: #333;
-  background-color: #f0f2f5;
+  color: var(--color-text-1);
+  background: var(--color-base-0);
   width: 100%;
   height: 100%;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #app {
@@ -49,23 +53,23 @@ button {
   }
 }
 
-/* 滚动条样式 */
+/* 滚动条 - dark theme */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--color-base-1);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #ccc;
+  background: var(--color-base-4);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #aaa;
+  background: var(--color-text-3);
 }
 </style>

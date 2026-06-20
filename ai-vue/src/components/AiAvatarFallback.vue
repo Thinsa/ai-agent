@@ -1,6 +1,7 @@
 <template>
   <div class="ai-avatar-fallback" :class="type">
     <span v-if="type === 'love'">❤️</span>
+    <span v-else-if="type === 'spark'">✨</span>
     <span v-else>🤖</span>
   </div>
 </template>
@@ -26,10 +27,14 @@ defineProps({
 }
 
 .love {
-  background: linear-gradient(45deg, #ff6b8b, #ff8e8e);
+  background: var(--gradient-soul);
+}
+
+.spark {
+  background: var(--gradient-spark);
 }
 
 .default, .super {
-  background: linear-gradient(45deg, #3f51b5, #5677fc);
+  background: var(--gradient-core);
 }
-</style> 
+</style>

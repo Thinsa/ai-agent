@@ -14,9 +14,24 @@ class LoveAppDocumentLoaderTest {
 
         assertThat(documents)
                 .hasSizeGreaterThanOrEqualTo(4)
-                .anySatisfy(document -> assertThat(document).contains("健康关系"));
-        assertThat(documents).anySatisfy(document -> assertThat(document).contains("单身篇"));
-        assertThat(documents).anySatisfy(document -> assertThat(document).contains("已婚篇"));
-        assertThat(documents).anySatisfy(document -> assertThat(document).contains("恋爱篇"));
+                .anySatisfy(doc -> assertThat(doc.content()).contains("健康关系"));
+        assertThat(documents).anySatisfy(doc -> assertThat(doc.content()).contains("单身篇"));
+        assertThat(documents).anySatisfy(doc -> assertThat(doc.content()).contains("已婚篇"));
+        assertThat(documents).anySatisfy(doc -> assertThat(doc.content()).contains("恋爱篇"));
+    }
+
+    @Test
+    void loadDocumentsReturnsLoadableDocumentsWithMetadata() {
+        LoveAppDocumentLoader loader = new LoveAppDocumentLoader();
+
+        var documents = loader.loadDocuments();
+
+        assertThat(documents).allSatisfy(doc -> {
+            assertThat(doc.docId()).startsWith("classpath:");
+            assertThat(doc.source()).isEqualTo("classpath");
+            assertThat(doc.title()).isNotBlank();
+            assertThat(doc.category()).isNotBlank();
+            assertThat(doc.content()).isNotBlank();
+        });
     }
 }

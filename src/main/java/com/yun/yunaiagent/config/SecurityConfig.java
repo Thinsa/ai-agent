@@ -52,7 +52,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/user/register", "/user/login", "/user/token/validate", "/health", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/user/current", "/user/profile", "/user/logout", "/backgrounds/**", "/story-saves/**").authenticated()
+                        .requestMatchers("/user/current", "/user/profile", "/user/logout", "/backgrounds/**", "/story-saves/**", "/knowledge-documents/**").authenticated()
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
