@@ -1,36 +1,10 @@
 <template>
   <main class="login-page">
-    <!-- 深层星空背景 -->
-    <div class="space-bg">
-      <div class="nebula n1"></div>
-      <div class="nebula n2"></div>
-      <div class="nebula n3"></div>
-      <div class="nebula n4"></div>
-    </div>
-
-    <!-- 漂浮光点 -->
-    <div class="constellation" aria-hidden="true">
-      <i v-for="n in 40" :key="n" class="star-dot" :style="starStyle(n)"></i>
-      <!-- 连线 (装饰性 SVG 线) -->
-      <svg class="constellation-lines" viewBox="0 0 1440 900" preserveAspectRatio="none">
-        <line x1="12%" y1="18%" x2="28%" y2="35%" />
-        <line x1="28%" y1="35%" x2="45%" y2="22%" />
-        <line x1="68%" y1="15%" x2="82%" y2="40%" />
-        <line x1="82%" y1="40%" x2="75%" y2="60%" />
-        <line x1="20%" y1="65%" x2="35%" y2="78%" />
-        <line x1="55%" y1="80%" x2="70%" y2="68%" />
-      </svg>
-    </div>
+    <CosmicBackground density="high" :overlay="true" />
 
     <div class="layout-grid">
       <!-- ═══ 左侧：品牌殿堂 ═══ -->
       <div class="brand-temple">
-        <!-- 巨型光晕 portal -->
-        <div class="portal-glow"></div>
-        <div class="portal-ring r1"></div>
-        <div class="portal-ring r2"></div>
-        <div class="portal-ring r3"></div>
-
         <!-- 桥形徽标 -->
         <div class="brand-icon-box">
           <svg class="brand-icon-main" viewBox="0 0 80 80" fill="none">
@@ -181,6 +155,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead } from '@vueuse/head'
 import { login, register } from '../stores/userStore'
+import CosmicBackground from '../components/CosmicBackground.vue'
 
 useHead({
   title: '登录 - LinkMind 灵桥',
@@ -236,25 +211,6 @@ const toggleMode = () => {
   isRegisterMode.value = !isRegisterMode.value
   errorMessage.value = ''
 }
-
-const starStyle = (n) => {
-  const angle = (n / 40) * 360
-  const radius = 20 + Math.random() * 45
-  const x = 50 + Math.cos(angle * Math.PI / 180) * radius
-  const y = 50 + Math.sin(angle * Math.PI / 180) * radius
-  const size = 1 + Math.random() * 2.5
-  const delay = Math.random() * 12
-  const duration = 3 + Math.random() * 7
-  return {
-    left: `${x}%`,
-    top: `${y}%`,
-    width: `${size}px`,
-    height: `${size}px`,
-    animationDelay: `${delay}s`,
-    animationDuration: `${duration}s`,
-    opacity: 0.2 + Math.random() * 0.6
-  }
-}
 </script>
 
 <style scoped>
@@ -268,64 +224,6 @@ const starStyle = (n) => {
   position: relative;
   overflow: hidden;
   background: #080c16;
-}
-
-/* ═══════ 星空背景 ═══════ */
-.space-bg {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
-}
-.nebula {
-  position: absolute; border-radius: 50%; filter: blur(150px);
-  animation: nebula-drift 30s var(--ease-in-out) infinite;
-}
-.nebula.n1 {
-  width: 700px; height: 700px;
-  background: radial-gradient(circle, rgba(180,160,232,0.22), transparent 70%);
-  top: -10%; left: -8%; animation-delay: 0s;
-}
-.nebula.n2 {
-  width: 600px; height: 600px;
-  background: radial-gradient(circle, rgba(126,200,224,0.15), transparent 70%);
-  bottom: -15%; left: 30%; animation-delay: -10s;
-}
-.nebula.n3 {
-  width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(240,192,96,0.10), transparent 70%);
-  top: 40%; right: -5%; animation-delay: -20s;
-}
-.nebula.n4 {
-  width: 400px; height: 400px;
-  background: radial-gradient(circle, rgba(240,144,160,0.08), transparent 70%);
-  top: 60%; left: 10%; animation-delay: -5s;
-}
-@keyframes nebula-drift {
-  0%, 100% { transform: translate(0,0) scale(1); }
-  33% { transform: translate(20px,-20px) scale(1.05); }
-  66% { transform: translate(-15px,15px) scale(0.95); }
-}
-
-/* ═══════ 星座光点 ═══════ */
-.constellation {
-  position: fixed; inset: 0; z-index: 1; pointer-events: none;
-}
-.star-dot {
-  position: absolute;
-  background: #fff;
-  border-radius: 50%;
-  animation: star-twinkle 5s var(--ease-in-out) infinite;
-}
-@keyframes star-twinkle {
-  0%, 100% { opacity: 0.2; transform: scale(0.6); }
-  50% { opacity: 1; transform: scale(1.2); }
-}
-.constellation-lines {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-}
-.constellation-lines line {
-  stroke: rgba(255,255,255,0.04);
-  stroke-width: 0.5;
 }
 
 /* ═══════ 双栏布局 ═══════ */
@@ -352,50 +250,6 @@ const starStyle = (n) => {
   background:
     radial-gradient(ellipse at 35% 50%, rgba(180,160,232,0.06), transparent 60%),
     radial-gradient(ellipse at 65% 50%, rgba(126,200,224,0.04), transparent 60%);
-}
-
-/* Portal 光环 */
-.portal-glow {
-  position: absolute;
-  width: 400px; height: 400px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(240,192,96,0.04), transparent 60%);
-  top: 22%; left: 50%;
-  transform: translateX(-50%);
-  filter: blur(40px);
-  animation: portal-breathe 6s var(--ease-in-out) infinite;
-}
-@keyframes portal-breathe {
-  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.6; }
-  50% { transform: translateX(-50%) scale(1.3); opacity: 1; }
-}
-
-.portal-ring {
-  position: absolute;
-  border-radius: 50%;
-  border: 1px solid rgba(240,192,96,0.06);
-  top: 50%; left: 50%;
-  animation: ring-expand 8s var(--ease-in-out) infinite;
-}
-.portal-ring.r1 {
-  width: 280px; height: 280px;
-  margin: -140px 0 0 -140px;
-}
-.portal-ring.r2 {
-  width: 360px; height: 360px;
-  margin: -180px 0 0 -180px;
-  animation-delay: -2.5s;
-  border-color: rgba(180,160,232,0.05);
-}
-.portal-ring.r3 {
-  width: 200px; height: 200px;
-  margin: -100px 0 0 -100px;
-  animation-delay: -5s;
-  border-color: rgba(126,200,224,0.05);
-}
-@keyframes ring-expand {
-  0%, 100% { transform: scale(1); opacity: 0.4; }
-  50% { transform: scale(1.12); opacity: 0.8; }
 }
 
 /* 品牌图标 */
@@ -790,9 +644,6 @@ const starStyle = (n) => {
   .brand-title-main {
     font-size: 3.8rem;
   }
-  .portal-ring.r1 { width: 200px; height: 200px; margin: -100px 0 0 -100px; }
-  .portal-ring.r2 { width: 260px; height: 260px; margin: -130px 0 0 -130px; }
-  .portal-ring.r3 { width: 140px; height: 140px; margin: -70px 0 0 -70px; }
   .brand-belief { display: none; }
   .temple-arc { display: none; }
   .dock-panel::before { display: none; }
@@ -806,6 +657,5 @@ const starStyle = (n) => {
   .brand-slogan { font-size: 0.82rem; margin-bottom: 0; }
   .dock-panel { padding: 24px 20px; }
   .dock-title { font-size: 1.3rem; }
-  .portal-glow { width: 240px; height: 240px; }
 }
 </style>
