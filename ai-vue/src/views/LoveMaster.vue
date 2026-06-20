@@ -2,7 +2,6 @@
   <div class="love-master-container">
     <PageHeader title="知心 Soul" back-to="/" gradient="var(--gradient-soul)">
       <template #actions>
-        <div class="chat-id">会话ID: {{ chatId }}</div>
         <button
           class="settings-toggle-button"
           type="button"
@@ -352,7 +351,6 @@ onBeforeUnmount(() => {
   display: flex; flex-direction: column; height: 100vh; min-height: 0; overflow: hidden;
   background: var(--color-base-0);
 }
-.chat-id { font-size: 14px; opacity: 0.88; color: var(--color-text-2); }
 .content-wrapper { position: relative; display: flex; flex: 1; min-height: 0; flex-direction: row; gap: 0; padding: 0; overflow: hidden; }
 .chat-area { position: relative; display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
 .settings-open .chat-area { flex: 0 0 50%; }
@@ -376,10 +374,9 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .chat-id { font-size: 12px; }
   .content-wrapper { flex-direction: column; padding: 0; }
   .settings-open .chat-area { flex: 1; }
-  .settings-toggle-button span, .chat-id { display: none; }
+  .settings-toggle-button span { display: none; }
 }
 @media (max-width: 480px) {
   .settings-toggle-button { min-width: 44px; min-height: 36px; }

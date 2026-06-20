@@ -105,12 +105,4 @@ public class LoveAppDocumentLoader {
         return "自定义";
     }
 
-    /**
-     * 兼容旧接口：仅返回纯文本列表。
-     */
-    public List<String> loadRawDocuments() {
-        return loadDocuments().stream()
-                .map(LoadableDocument::content)
-                .toList();
-    }
 }

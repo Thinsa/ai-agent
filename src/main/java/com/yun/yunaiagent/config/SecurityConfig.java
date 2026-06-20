@@ -51,11 +51,11 @@ public class SecurityConfig {
                 .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(unauthorizedEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/user/register", "/user/login", "/user/token/validate", "/health", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/user/register", "/user/login", "/user/token/validate", "/health", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
+                                "/ai/**").permitAll()
                         .requestMatchers("/user/current", "/user/profile", "/user/logout",
                                 "/backgrounds/**", "/story-saves/**",
                                 "/knowledge-documents/**").authenticated()
-                        .requestMatchers("/ai/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

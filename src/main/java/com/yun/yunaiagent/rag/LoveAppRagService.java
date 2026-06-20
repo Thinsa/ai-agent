@@ -11,10 +11,12 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 恋爱应用 RAG 服务。
@@ -155,6 +157,10 @@ public class LoveAppRagService implements ApplicationRunner {
         return sb.toString().trim();
     }
 
+    /**
+     * 按段落+字符数手工分块，确保每块不超过 embedding 模型上限（2048 tokens）。
+     * 中文约 1-2 字符/token，取保守值 1500 字符/块，在段落边界处切分。
+     */
     private List<Document> toVectorDocuments(List<LoadableDocument> sources) {
         List<Document> documents = new ArrayList<>();
         for (int i = 0; i < sources.size(); i++) {
@@ -162,17 +168,76 @@ public class LoveAppRagService implements ApplicationRunner {
             if (src.content() == null || src.content().isBlank()) {
                 continue;
             }
-            Map<String, Object> metadata = new LinkedHashMap<>();
-            metadata.put("source", src.source());
-            metadata.put("index", i);
-            metadata.put("title", src.title());
-            metadata.put("category", src.category());
-            if (src.docId() != null) {
-                metadata.put("docId", src.docId());
+            List<String> chunks = splitByParagraphs(src.content(), 1500);
+            for (int j = 0; j < chunks.size(); j++) {
+                Map<String, Object> metadata = new LinkedHashMap<>();
+                metadata.put("source", src.source());
+                metadata.put("index", i);
+                metadata.put("chunk", j);
+                metadata.put("title", src.title());
+                metadata.put("category", src.category());
+                if (src.docId() != null) {
+                    metadata.put("docId", src.docId());
+                }
+                String logicalChunkId = src.docId() != null
+                        ? src.docId() + "-chunk-" + j
+                        : "love-doc-" + i + "-chunk-" + j;
+                documents.add(new Document(stableVectorId(logicalChunkId), chunks.get(j), metadata));
             }
-            String docId = src.docId() != null ? src.docId() : "love-doc-" + i;
-            documents.add(new Document(docId, src.content(), metadata));
         }
         return documents;
+    }
+
+    /**
+     * PGVector expects vector document IDs to be UUID strings.
+     * Keep source doc IDs in metadata, and derive stable UUIDs for vector rows.
+     */
+    private String stableVectorId(String logicalChunkId) {
+        return UUID.nameUUIDFromBytes(("love-rag:" + logicalChunkId).getBytes(StandardCharsets.UTF_8))
+                .toString();
+    }
+
+    /**
+     * 在段落边界（#### / 空行）处将文本切分为长度不超过 maxChars 的块。
+     */
+    private List<String> splitByParagraphs(String text, int maxChars) {
+        List<String> result = new ArrayList<>();
+        // 按 #### 标题或双换行分割段落
+        String[] paragraphs = text.split("(?=\\n####\\s)|\\n\\n+");
+        StringBuilder current = new StringBuilder();
+        for (String para : paragraphs) {
+            para = para.trim();
+            if (para.isEmpty()) continue;
+            // 如果当前块加上这个段落超出限制，先存当前块
+            if (current.length() + para.length() + 1 > maxChars && current.length() > 0) {
+                result.add(current.toString().trim());
+                current = new StringBuilder();
+            }
+            // 如果单个段落本身就超长，按句号/换行进一步拆分
+            if (para.length() > maxChars) {
+                // 先 flush 当前累积
+                if (current.length() > 0) {
+                    result.add(current.toString().trim());
+                    current = new StringBuilder();
+                }
+                // 按句号拆分超长段落
+                String[] sentences = para.split("(?<=[。！？])");
+                for (String sentence : sentences) {
+                    sentence = sentence.trim();
+                    if (sentence.isEmpty()) continue;
+                    if (current.length() + sentence.length() > maxChars && current.length() > 0) {
+                        result.add(current.toString().trim());
+                        current = new StringBuilder();
+                    }
+                    current.append(sentence);
+                }
+            } else {
+                current.append(para).append("\n\n");
+            }
+        }
+        if (current.length() > 0) {
+            result.add(current.toString().trim());
+        }
+        return result;
     }
 }

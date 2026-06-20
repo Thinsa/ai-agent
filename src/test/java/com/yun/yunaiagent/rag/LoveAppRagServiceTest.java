@@ -15,8 +15,10 @@ import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 class LoveAppRagServiceTest {
 
@@ -68,6 +70,26 @@ class LoveAppRagServiceTest {
         assertThat(context).isNotBlank();
     }
 
+    @Test
+    void reindexUsesUuidDocumentIdsForPgVectorDelete() {
+        UuidEnforcingVectorStore vectorStore = new UuidEnforcingVectorStore();
+        LoveAppRagService service = new LoveAppRagService(
+                new LoveAppDocumentLoader(),
+                new QueryRewriter(new FakeChatModel()),
+                provider(vectorStore),
+                new com.yun.yunaiagent.rag.EmptyKnowledgeDocumentRepository()
+        );
+
+        service.reindexAll();
+
+        assertThat(vectorStore.deletedIds).isNotEmpty();
+        assertThat(vectorStore.addedDocuments).isNotEmpty();
+        assertThat(vectorStore.deletedIds)
+                .allSatisfy(id -> assertThatCode(() -> UUID.fromString(id)).doesNotThrowAnyException());
+        assertThat(vectorStore.addedDocuments)
+                .allSatisfy(document -> assertThatCode(() -> UUID.fromString(document.getId())).doesNotThrowAnyException());
+    }
+
     private static ObjectProvider<VectorStore> provider(VectorStore vectorStore) {
         return new ObjectProvider<>() {
             @Override
@@ -86,7 +108,7 @@ class LoveAppRagServiceTest {
 
     private static class FakeVectorStore implements VectorStore {
 
-        private final List<Document> addedDocuments = new ArrayList<>();
+        protected final List<Document> addedDocuments = new ArrayList<>();
 
         private SearchRequest lastRequest;
 
@@ -108,6 +130,17 @@ class LoveAppRagServiceTest {
         public List<Document> similaritySearch(SearchRequest request) {
             this.lastRequest = request;
             return List.of(new Document("retrieved relationship context"));
+        }
+    }
+
+    private static class UuidEnforcingVectorStore extends FakeVectorStore {
+
+        private final List<String> deletedIds = new ArrayList<>();
+
+        @Override
+        public void delete(List<String> idList) {
+            idList.forEach(UUID::fromString);
+            deletedIds.addAll(idList);
         }
     }
 

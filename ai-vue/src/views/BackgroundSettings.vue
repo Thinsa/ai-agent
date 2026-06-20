@@ -1,6 +1,6 @@
 <template>
   <div class="settings-page">
-    <PageHeader title="背景设置" back-to="/user-profile" />
+    <PageHeader title="背景设置" back-to="/" />
 
     <div class="content">
       <div class="agent-tabs">

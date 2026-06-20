@@ -47,13 +47,20 @@
           </linearGradient>
         </defs>
       </svg>
+      <div class="hero-kicker">今天想让 AI 帮你做什么？</div>
       <h1 class="hero-title">LinkMind 灵桥</h1>
       <p class="hero-sub">心与智之间，搭一座桥</p>
+      <p class="hero-desc">保留灵感与陪伴的温度，也让搜索、创作、推理这些任务更快抵达。</p>
     </section>
 
     <!-- ═══ 三大智能体 ═══ -->
     <section class="agents-strip">
-      <AgentCard v-for="agent in agents" :key="agent.id" v-bind="agent" />
+      <AgentCard
+        v-for="(agent, index) in agents"
+        :key="agent.id"
+        v-bind="agent"
+        :style="{ '--panel-index': index }"
+      />
     </section>
 
     <!-- ═══ 底部 ═══ -->
@@ -89,9 +96,36 @@ const router = useRouter()
 const navigateTo = (path) => { router.push(path) }
 
 const agents = [
-  { id: 'soul', title: '知心 Soul', tagline: '温柔陪伴，共情倾听', description: '情感咨询 · 关系建议 · 心灵树洞', actionText: '进入心灵空间', theme: 'soul', to: '/love-master' },
-  { id: 'spark', title: '灵语 Spark', tagline: '分支叙事，互动创作', description: '互动剧本 · 分支结局 · AI 叙事', actionText: '开启故事之旅', theme: 'spark', to: '/chat' },
-  { id: 'core', title: '极智 Core', tagline: '工具调用，全能解决', description: '联网搜索 · 图片生成 · ReAct 推理', actionText: '启动极智引擎', theme: 'core', to: '/super-agent' },
+  {
+    id: 'soul',
+    title: '知心 Soul',
+    taskLabel: '情绪整理',
+    tagline: '适合倾诉、关系分析、情绪陪伴',
+    description: '用更柔和的节奏陪你梳理心事，给出可执行的关系建议。',
+    actionText: '进入心灵空间',
+    theme: 'soul',
+    to: '/love-master'
+  },
+  {
+    id: 'spark',
+    title: '灵语 Spark',
+    taskLabel: '互动创作',
+    tagline: '适合剧本、分支剧情、灵感推进',
+    description: '把你的选择变成故事分岔，和 AI 一起推进每个转折。',
+    actionText: '开启故事之旅',
+    theme: 'spark',
+    to: '/chat'
+  },
+  {
+    id: 'core',
+    title: '极智 Core',
+    taskLabel: '任务处理',
+    tagline: '适合搜索、图片生成、工具调用',
+    description: '面向复杂问题调度工具与推理能力，帮你更快拿到结果。',
+    actionText: '启动极智引擎',
+    theme: 'core',
+    to: '/super-agent'
+  },
 ]
 </script>
 
@@ -179,8 +213,9 @@ const agents = [
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 60px 20px 40px;
+  padding: 54px 20px 36px;
   position: relative; z-index: 2;
+  text-align: center;
 }
 
 .hero-glow {
@@ -198,8 +233,23 @@ const agents = [
 
 .hero-bridge {
   width: 260px; height: 40px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
   position: relative; z-index: 1;
+}
+
+.hero-kicker {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 12px;
+  padding: 7px 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.035);
+  color: var(--color-aurora-1);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  backdrop-filter: blur(8px);
 }
 
 .hero-title {
@@ -222,6 +272,16 @@ const agents = [
   position: relative; z-index: 1;
   font-weight: 400;
 }
+.hero-desc {
+  max-width: 520px;
+  margin: 14px 0 0;
+  color: var(--color-text-2);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+  position: relative;
+  z-index: 1;
+}
 
 /* ═══════════════════════════════════
    智能体面板条
@@ -229,8 +289,8 @@ const agents = [
 .agents-strip {
   display: flex;
   justify-content: center;
-  gap: 24px;
-  padding: 20px 24px 60px;
+  gap: 22px;
+  padding: 18px 24px 58px;
   flex: 1;
   position: relative; z-index: 2;
   flex-wrap: wrap;
@@ -262,12 +322,15 @@ const agents = [
   .agents-strip { flex-direction: column; align-items: center; gap: 20px; padding: 10px 16px 40px; }
   .hero-title { font-size: 2.4rem; }
   .topbar { padding: 10px 16px; }
+  .hero-desc { max-width: 440px; }
 }
 
 @media (max-width: 520px) {
-  .hero { padding: 40px 16px 24px; }
+  .hero { padding: 34px 16px 24px; }
   .hero-title { font-size: 1.8rem; letter-spacing: 2px; }
   .hero-sub { font-size: 0.78rem; letter-spacing: 2px; }
+  .hero-desc { font-size: 0.8rem; letter-spacing: 0.02em; }
+  .hero-kicker { font-size: 0.72rem; }
   .hero-bridge { width: 180px; height: 28px; }
   .brand-mini { display: none; }
   .topbar-pulse, .topbar-status { display: none; }

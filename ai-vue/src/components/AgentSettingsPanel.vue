@@ -73,10 +73,6 @@
           label="联网搜索"
           description="需要最新信息时启用"
         />
-
-        <div class="muted">
-          <ToggleSwitch label="样例库" description="暂未启用" disabled />
-        </div>
       </section>
 
       <section class="panel-block">
