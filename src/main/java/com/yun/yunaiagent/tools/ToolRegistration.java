@@ -2,6 +2,7 @@ package com.yun.yunaiagent.tools;
 
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -16,26 +17,26 @@ public class ToolRegistration {
 
     @Bean
     public ToolCallbackProvider agentToolCallbackProvider(
-            FileOperationTool fileOperationTool,
+            ObjectProvider<FileOperationTool> fileOperationTool,
             WebSearchTool webSearchTool,
             WebScrapingTool webScrapingTool,
-            ResourceDownloadTool resourceDownloadTool,
-            TerminalOperationTool terminalOperationTool,
+            ObjectProvider<ResourceDownloadTool> resourceDownloadTool,
+            ObjectProvider<TerminalOperationTool> terminalOperationTool,
             PDFGenerationTool pdfGenerationTool,
             ImageGenerationTool imageGenerationTool,
             TerminateTool terminateTool
     ) {
-        return MethodToolCallbackProvider.builder()
+        var builder = MethodToolCallbackProvider.builder()
                 .toolObjects(
-                        fileOperationTool,
                         webSearchTool,
                         webScrapingTool,
-                        resourceDownloadTool,
-                        terminalOperationTool,
                         pdfGenerationTool,
                         imageGenerationTool,
                         terminateTool
-                )
-                .build();
+                );
+        fileOperationTool.ifAvailable(builder::toolObjects);
+        resourceDownloadTool.ifAvailable(builder::toolObjects);
+        terminalOperationTool.ifAvailable(builder::toolObjects);
+        return builder.build();
     }
 }

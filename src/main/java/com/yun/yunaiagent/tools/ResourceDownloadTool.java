@@ -1,6 +1,7 @@
 package com.yun.yunaiagent.tools;
 
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
@@ -13,6 +14,7 @@ import java.nio.file.Path;
  *
  * <p>真正下载前应校验 URL 协议、文件大小、目标路径和网络超时。</p>
  */
+@ConditionalOnProperty(name = "app.tools.resource-download.enabled", havingValue = "true")
 @Component
 public class ResourceDownloadTool implements AgentTool {
 

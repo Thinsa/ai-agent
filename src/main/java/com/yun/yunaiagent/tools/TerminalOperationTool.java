@@ -2,6 +2,7 @@ package com.yun.yunaiagent.tools;
 
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -17,6 +18,7 @@ import java.util.concurrent.TimeUnit;
  *
  * <p>真实执行命令风险较高，接入时应增加白名单、超时、工作目录限制和输出截断。</p>
  */
+@ConditionalOnProperty(name = "app.tools.terminal-execution.enabled", havingValue = "true")
 @Component
 public class TerminalOperationTool implements AgentTool {
 

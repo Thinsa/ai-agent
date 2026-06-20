@@ -1,6 +1,7 @@
 package com.yun.yunaiagent.tools;
 
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -13,6 +14,7 @@ import java.nio.file.Path;
  *
  * <p>真正落地时需要重点处理路径白名单、编码、文件大小和异常信息脱敏。</p>
  */
+@ConditionalOnProperty(name = "app.tools.file-operation.enabled", havingValue = "true")
 @Component
 public class FileOperationTool implements AgentTool {
 
