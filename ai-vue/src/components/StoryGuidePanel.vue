@@ -12,19 +12,12 @@
           </button>
         </div>
 
-        <div class="toggle-row">
-          <div class="row-label">
-            <span>结局引导</span>
-            <small>{{ enabled ? 'Spark 会提示下一步' : '关闭后不再提示路线' }}</small>
-          </div>
-          <button
-            class="switch"
-            type="button"
-            :class="{ active: enabled }"
-            :aria-label="enabled ? '关闭结局引导' : '开启结局引导'"
-            @click="$emit('update:enabled', !enabled)"
-          ></button>
-        </div>
+        <ToggleSwitch
+          :model-value="enabled"
+          @update:model-value="$emit('update:enabled', $event)"
+          label="结局引导"
+          :description="enabled ? 'Spark 会提示下一步' : '关闭后不再提示路线'"
+        />
       </section>
 
       <section class="guide-block">
@@ -57,6 +50,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import ToggleSwitch from './ToggleSwitch.vue'
 
 const props = defineProps({
   enabled: {
@@ -137,22 +131,6 @@ const endingTypeLabel = type => {
 .row-label span, .row-label small { display: block; }
 .row-label span { color: var(--color-text-1); font-size: 15px; font-weight: 800; }
 .row-label small { margin-top: 3px; color: var(--color-text-2); font-size: 12px; }
-
-.switch {
-  position: relative; flex: 0 0 auto; width: 38px; height: 22px;
-  border: 0; border-radius: var(--radius-full);
-  background: var(--color-base-4); cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out);
-}
-.switch::after {
-  content: ''; position: absolute; top: 3px; left: 3px;
-  width: 16px; height: 16px; border-radius: 50%;
-  background: var(--color-base-1);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  transition: transform var(--duration-fast) var(--ease-out);
-}
-.switch.active { background: var(--color-aurora-2); }
-.switch.active::after { transform: translateX(16px); background: var(--color-base-0); }
 
 .group-title { margin-bottom: 14px; color: var(--color-text-1); font-size: 16px; font-weight: 800; }
 .ending-list { display: grid; gap: 10px; }

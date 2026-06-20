@@ -28,19 +28,12 @@
       </section>
 
       <section v-if="showVision" class="panel-block">
-        <div class="toggle-row">
-          <div class="row-label">
-            <span>视觉</span>
-            <small>{{ visionEnabled ? '已启用，AI 能看见图片' : '关闭后图片以文本形式传入' }}</small>
-          </div>
-          <button
-            class="switch"
-            type="button"
-            :class="{ active: visionEnabled }"
-            :aria-label="visionEnabled ? '关闭视觉功能' : '开启视觉功能'"
-            @click="$emit('update:visionEnabled', !visionEnabled)"
-          ></button>
-        </div>
+        <ToggleSwitch
+          :model-value="visionEnabled"
+          @update:model-value="$emit('update:visionEnabled', $event)"
+          label="视觉"
+          :description="visionEnabled ? '已启用，AI 能看见图片' : '关闭后图片以文本形式传入'"
+        />
       </section>
 
       <section class="panel-block">
@@ -67,35 +60,22 @@
               <span class="ability-meta">知识库检索</span>
             </div>
           </div>
-          <button
-            class="switch"
-            type="button"
-            :class="{ active: knowledgeEnabled }"
-            :aria-label="knowledgeEnabled ? '关闭知识库' : '开启知识库'"
-            @click="$emit('update:knowledgeEnabled', !knowledgeEnabled)"
-          ></button>
+          <ToggleSwitch
+            :model-value="knowledgeEnabled"
+            @update:model-value="$emit('update:knowledgeEnabled', $event)"
+          />
         </div>
 
-        <div v-if="showWebSearch" class="toggle-row">
-          <div class="row-label">
-            <span>联网搜索</span>
-            <small>需要最新信息时启用</small>
-          </div>
-          <button
-            class="switch"
-            type="button"
-            :class="{ active: webSearchEnabled }"
-            :aria-label="webSearchEnabled ? '关闭联网搜索' : '开启联网搜索'"
-            @click="$emit('update:webSearchEnabled', !webSearchEnabled)"
-          ></button>
-        </div>
+        <ToggleSwitch
+          v-if="showWebSearch"
+          :model-value="webSearchEnabled"
+          @update:model-value="$emit('update:webSearchEnabled', $event)"
+          label="联网搜索"
+          description="需要最新信息时启用"
+        />
 
-        <div class="toggle-row muted">
-          <div class="row-label">
-            <span>样例库</span>
-            <small>暂未启用</small>
-          </div>
-          <button class="switch disabled" type="button" disabled aria-label="样例库暂不可用"></button>
+        <div class="muted">
+          <ToggleSwitch label="样例库" description="暂未启用" disabled />
         </div>
       </section>
 
@@ -117,13 +97,10 @@
               <span class="ability-meta">{{ mcpEnabled ? '已启用' : '未启用' }}</span>
             </div>
           </div>
-          <button
-            class="switch"
-            type="button"
-            :class="{ active: mcpEnabled }"
-            :aria-label="mcpEnabled ? '关闭 MCP 模式' : '开启 MCP 模式'"
-            @click="$emit('update:mcpEnabled', !mcpEnabled)"
-          ></button>
+          <ToggleSwitch
+            :model-value="mcpEnabled"
+            @update:model-value="$emit('update:mcpEnabled', $event)"
+          />
         </div>
       </section>
     </div>
@@ -131,6 +108,8 @@
 </template>
 
 <script setup>
+import ToggleSwitch from './ToggleSwitch.vue'
+
 const props = defineProps({
   theme: {
     type: String,
@@ -273,23 +252,6 @@ const appendDocumentsVariable = () => {
 }
 .ability-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .ability-name { color: var(--color-text-1); font-size: 15px; font-weight: 800; }
-
-.switch {
-  position: relative; flex: 0 0 auto; width: 38px; height: 22px;
-  border: 0; border-radius: var(--radius-full);
-  background: var(--color-base-4); cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out);
-}
-.switch::after {
-  content: ''; position: absolute; top: 3px; left: 3px;
-  width: 16px; height: 16px; border-radius: 50%;
-  background: var(--color-base-1);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  transition: transform var(--duration-fast) var(--ease-out);
-}
-.switch.active { background: var(--color-glow); }
-.switch.active::after { transform: translateX(16px); background: var(--color-base-0); }
-.switch.disabled { cursor: not-allowed; opacity: 0.45; }
 
 @media (max-width: 768px) {
   .settings-panel { flex: 0 0 auto; width: 100%; height: auto; max-height: 420px; }
