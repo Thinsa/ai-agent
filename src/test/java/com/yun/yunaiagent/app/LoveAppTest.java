@@ -31,7 +31,7 @@ class LoveAppTest {
 
     @Test
     void doChatUsesChatModelContent() {
-        LoveApp loveApp = new LoveApp(new FakeChatModel(), fakeRagService(), emptyProvider());
+        LoveApp loveApp = LoveApp.create(new FakeChatModel(), fakeRagService(), emptyProvider());
 
         String response = loveApp.doChat("hello", "chat-1");
 

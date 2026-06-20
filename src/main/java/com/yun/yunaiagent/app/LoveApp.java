@@ -45,6 +45,7 @@ public class LoveApp {
 
     private final StreamingChatService streamingChatService;
 
+    // Single primary constructor:
     @Autowired
     public LoveApp(@Qualifier("openAiChatModel") ChatModel chatModel, LoveAppRagService ragService,
                    ObjectProvider<ToolCallbackProvider> toolCallbackProvider,
@@ -57,8 +58,10 @@ public class LoveApp {
         this.streamingChatService = streamingChatService;
     }
 
-    public LoveApp(ChatModel chatModel, LoveAppRagService ragService, ObjectProvider<ToolCallbackProvider> toolCallbackProvider) {
-        this(chatModel, ragService, toolCallbackProvider, null, null);
+    // Factory for tests (no ChatHistoryService, no StreamingChatService):
+    public static LoveApp create(ChatModel chatModel, LoveAppRagService ragService,
+            ObjectProvider<ToolCallbackProvider> toolCallbackProvider) {
+        return new LoveApp(chatModel, ragService, toolCallbackProvider, null, null);
     }
 
     public String doChat(String message, String chatId) {
