@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
@@ -14,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * 启动时把已存在的本地环境变量整合进 local-api-keys.txt。
  */
+@ConditionalOnProperty(name = "app.env-file.enabled", havingValue = "true")
 @Component
 public class LocalEnvironmentFileInitializer implements ApplicationRunner {
 
@@ -24,6 +26,8 @@ public class LocalEnvironmentFileInitializer implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         try {
+            log.warn("SECURITY: Writing secrets to local-api-keys.txt in plaintext. " +
+                     "Set app.env-file.enabled=false to disable this feature.");
             LocalEnvironmentFileService.MergeResult result = service.merge(
                     Path.of("local-api-keys.txt"),
                     readWindowsUserEnvironment(),
