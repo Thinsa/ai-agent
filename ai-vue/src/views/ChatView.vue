@@ -1,13 +1,11 @@
 <template>
   <div class="spark-chat-page">
-    <div class="header">
-      <button class="back-button" type="button" @click="goBack">返回</button>
-      <h1 class="title">灵语 Spark</h1>
-      <div class="header-actions">
+    <PageHeader title="灵语 Spark" back-to="/">
+      <template #actions>
         <button class="mode-toggle" type="button" :class="{ active: currentMode === 'story' }" @click="switchMode('story')">🤖 AI剧本</button>
         <button class="mode-toggle" type="button" :class="{ active: currentMode === 'fixed' }" @click="switchMode('fixed')">📖 {{ scriptTitle }}</button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <div class="content-wrapper" :class="{ 'guide-open': currentMode === 'fixed' && guideOpen }">
       <ChatHistorySidebar
@@ -63,15 +61,19 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
 import { useHead } from '@vueuse/head'
 import ChatHistorySidebar from '../components/ChatHistorySidebar.vue'
 import ChatRoom from '../components/ChatRoom.vue'
 import StoryGuidePanel from '../components/StoryGuidePanel.vue'
-import { chatStory, createStorySave, listStorySaves, deleteStorySave, getChatHistory, listChatSessions } from '../api'
-import { startStory, chooseOption, getSaveData, loadFromSave, resetStory, isAtEnding, getEndingTitle, getScriptMeta, getCurrentScene } from '../stores/fixedStoryStore'
-import { createGuideHint, getGuideStatus, getStoryEndings } from '../stores/storyGuide'
+import PageHeader from '../components/PageHeader.vue'
+import { useSseChat } from '../composables/useSseChat'
+import { useFixedStory } from '../composables/useFixedStory'
+import { useStoryGuide } from '../composables/useStoryGuide'
+import { createStorySave, listStorySaves, getChatHistory, listChatSessions } from '../api'
+import { getStoredToken } from '../api'
+import { startStory, chooseOption, getSaveData, loadFromSave, resetStory, isAtEnding } from '../stores/fixedStoryStore'
+import { getGuideStatus } from '../stores/storyGuide'
 
 useHead({
   title: '灵语 Spark 互动剧本 - LinkMind 灵桥',
@@ -87,25 +89,36 @@ useHead({
   ]
 })
 
-const router = useRouter()
+// SSE management
+const { connectionStatus, streamPaused, startStream, closeStream, stopGeneration } = useSseChat()
+
+// Fixed story
+const fixedStory = useFixedStory()
+const scriptTitle = fixedStory.scriptTitle
+
+// Story guide — destructure refs for template auto-unwrapping
+const {
+  guideEnabled,
+  targetEndingId,
+  guideOpen,
+  storyEndings,
+  selectedEndingTitle,
+  setGuideEnabled: setGuideEnabledRaw,
+  setTargetEndingId: setTargetEndingIdRaw,
+  getHint,
+} = useStoryGuide(() => fixedStory.getCurrentScene()?.id)
+
 const messages = ref([])
 const chatId = ref('')
-const connectionStatus = ref('disconnected')
-const streamPaused = ref(false)
 const historySessions = ref([])
 const historyLoading = ref(false)
-let eventSource = null
 const currentMode = ref('story') // 'story' | 'fixed'
-const scriptTitle = computed(() => getScriptMeta().title)
-const guideOpen = ref(false)
-const guideEnabled = ref(false)
-const targetEndingId = ref('')
-const storyEndings = getStoryEndings()
+
 const guideStatus = computed(() => {
   if (currentMode.value !== 'fixed') {
     return { state: 'not_started' }
   }
-  return getGuideStatus(getCurrentScene()?.id, targetEndingId.value)
+  return getGuideStatus(fixedStory.getCurrentScene()?.id, targetEndingId.value)
 })
 
 const generateChatId = () => 'spark_' + Math.random().toString(36).slice(2, 10)
@@ -127,27 +140,24 @@ const addGuideMessage = content => {
 }
 
 const addGuideHintForCurrentScene = () => {
-  if (currentMode.value !== 'fixed' || !guideEnabled.value || isAtEnding()) {
+  if (currentMode.value !== 'fixed' || fixedStory.isAtEnding()) {
     return
   }
-  addGuideMessage(createGuideHint(getCurrentScene()?.id, targetEndingId.value))
+  const hint = getHint()
+  if (hint) addGuideMessage(hint)
 }
-
-const selectedEndingTitle = computed(() => {
-  return storyEndings.find(ending => ending.id === targetEndingId.value)?.title || ''
-})
 
 const addEndingGuideResult = () => {
   if (currentMode.value !== 'fixed' || !guideEnabled.value || !targetEndingId.value) {
     return
   }
-  if (selectedEndingTitle.value && getEndingTitle() !== selectedEndingTitle.value) {
-    addGuideMessage(`灵语 Spark 轻轻按灭桥灯：你已抵达「${getEndingTitle() || '其他结局'}」，不是目标「${selectedEndingTitle.value}」。可重新开始再试。`)
+  if (selectedEndingTitle.value && fixedStory.getEndingTitle() !== selectedEndingTitle.value) {
+    addGuideMessage(`灵语 Spark 轻轻按灭桥灯：你已抵达「${fixedStory.getEndingTitle() || '其他结局'}」，不是目标「${selectedEndingTitle.value}」。可重新开始再试。`)
   }
 }
 
 const setGuideEnabled = enabled => {
-  guideEnabled.value = enabled
+  setGuideEnabledRaw(enabled)
   if (enabled) {
     if (!targetEndingId.value) {
       addGuideMessage('灵语 Spark 低声提醒：先在引导面板中选择想抵达的结局，我再替你拨亮下一盏桥灯。')
@@ -158,7 +168,7 @@ const setGuideEnabled = enabled => {
 }
 
 const setTargetEndingId = endingId => {
-  targetEndingId.value = endingId
+  setTargetEndingIdRaw(endingId)
   addGuideHintForCurrentScene()
 }
 
@@ -178,17 +188,15 @@ const toPageMessage = message => {
   }
 }
 
-const closeStream = () => {
-  if (eventSource) {
-    eventSource.close()
-    eventSource = null
-  }
-}
-
-const stopGeneration = () => {
-  closeStream()
-  connectionStatus.value = 'disconnected'
-  streamPaused.value = true
+const buildSseUrl = (path, params = {}) => {
+  const token = getStoredToken()
+  const mergedParams = token ? { ...params, token } : params
+  const queryString = Object.keys(mergedParams)
+    .filter(key => mergedParams[key] !== undefined && mergedParams[key] !== null)
+    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(mergedParams[key])}`)
+    .join('&')
+  const baseUrl = import.meta.env.PROD ? '/api' : 'http://localhost:8123/api'
+  return `${baseUrl}${path}${queryString ? `?${queryString}` : ''}`
 }
 
 const resumeGeneration = () => {
@@ -227,7 +235,7 @@ const startNewSession = () => {
   messages.value = []
   if (currentMode.value === 'fixed') {
     resetStory()
-    window.__storySaves = null
+    fixedStory._storySaves.value = []
     addMessage('这是一个关于灵桥、命运与选择的奇幻故事，拥有 4 种不同结局。\n\n输入「开始」进入故事，输入「存档」保存进度，输入「读档」读取存档。', false)
   } else {
     addMessage('你好，我是灵语 Spark 的互动剧本主持人！给我一个主题（如"武侠""科幻""悬疑""末日"），或者直接说"开始"，我会为你展开一段分支故事。在每个关键节点，你可以从选项中选择下一步行动，决定故事的最终结局。', false)
@@ -237,7 +245,6 @@ const startNewSession = () => {
 const runChat = message => {
   const aiMessageIndex = messages.value.length
   addMessage('', false)
-  connectionStatus.value = 'connecting'
 
   const onMessage = data => {
     if (data && data !== '[DONE]' && aiMessageIndex < messages.value.length) {
@@ -268,9 +275,11 @@ const runChat = message => {
     closeStream()
   }
 
-  eventSource = chatStory(message, chatId.value, onMessage, onError)
-  eventSource.onmessage = event => onMessage(event.data)
-  eventSource.onerror = onError
+  const url = buildSseUrl('/ai/story/sse', { message, chatId: chatId.value })
+  const es = startStream(url)
+  connectionStatus.value = 'connecting'
+  es.onmessage = event => onMessage(event.data)
+  es.onerror = onError
 }
 
 const switchMode = mode => {
@@ -281,7 +290,7 @@ const switchMode = mode => {
   streamPaused.value = false
   if (mode === 'fixed') {
     resetStory()
-    window.__storySaves = null
+    fixedStory._storySaves.value = []
   }
   startNewSession()
 }
@@ -305,7 +314,7 @@ const handleFixedStoryMessage = message => {
   const trimmed = message.trim()
 
   // 如果在读档列表中做了选择
-  if (window.__storySaves) {
+  if (fixedStory._storySaves.value.length) {
     const saveIdx = parseInt(trimmed) - 1
     if (!isNaN(saveIdx) && saveIdx >= 0) {
       addMessage(trimmed, true)
@@ -380,7 +389,7 @@ const showLoadPanel = async () => {
       text += `${i + 1}. ${time} — 场景: ${s.sceneId}\n`
     })
     text += `${saves.length + 1}. 取消`
-    window.__storySaves = saves
+    fixedStory._storySaves.value = saves
     addMessage(text, false)
   } catch (e) {
     addMessage('❌ 读取存档列表失败。', false)
@@ -388,10 +397,10 @@ const showLoadPanel = async () => {
 }
 
 const handleLoadChoice = idx => {
-  const saves = window.__storySaves
-  if (!saves || idx >= saves.length) {
+  const saves = fixedStory._storySaves.value
+  if (!saves.length || idx >= saves.length) {
     addMessage('已取消读档。', false)
-    window.__storySaves = null
+    fixedStory._storySaves.value = []
     return
   }
   const save = saves[idx]
@@ -405,20 +414,12 @@ const handleLoadChoice = idx => {
       addGuideHintForCurrentScene()
     }
   }
-  window.__storySaves = null
-}
-
-const goBack = () => {
-  router.push('/')
+  fixedStory._storySaves.value = []
 }
 
 onMounted(() => {
   startNewSession()
   loadSessions()
-})
-
-onBeforeUnmount(() => {
-  closeStream()
 })
 </script>
 
@@ -427,32 +428,6 @@ onBeforeUnmount(() => {
   display: flex; flex-direction: column; height: 100vh; min-height: 0; overflow: hidden;
   background: var(--color-base-0);
 }
-.header {
-  display: grid; flex: 0 0 auto;
-  grid-template-columns: 1fr auto 1fr; align-items: center;
-  padding: 12px 18px;
-  background: var(--glass-card);
-  backdrop-filter: blur(var(--blur-header));
-  border-bottom: var(--border-subtle);
-  color: var(--color-text-1);
-  z-index: 10;
-}
-.back-button {
-  display: inline-flex; align-items: center; justify-self: start;
-  border: 0; background: transparent; color: var(--color-text-2);
-  cursor: pointer; font-size: 16px;
-  transition: color var(--duration-fast) var(--ease-out);
-}
-.back-button:hover { color: var(--color-glow); }
-.back-button::before { content: '<'; margin-right: 8px; }
-.title {
-  justify-self: center; margin: 0; text-align: center;
-  font-size: 20px; font-weight: bold;
-  background: var(--gradient-spark);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.header-actions { display: flex; align-items: center; justify-self: end; gap: 12px; }
 .content-wrapper { position: relative; display: flex; flex: 1; min-height: 0; overflow: hidden; }
 .chat-area { position: relative; display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
 .guide-open .chat-area { flex: 0 0 50%; }
@@ -493,15 +468,10 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .header { padding: 12px 16px; }
-  .title { font-size: 18px; }
   .content-wrapper { flex-direction: column; }
   .guide-open .chat-area { flex: 1; }
 }
 @media (max-width: 480px) {
-  .header { padding: 10px 12px; }
-  .back-button { font-size: 14px; }
-  .title { font-size: 16px; }
   .guide-toggle-button span { display: none; }
 }
 </style>
