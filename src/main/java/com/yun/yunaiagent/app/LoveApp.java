@@ -2,6 +2,7 @@ package com.yun.yunaiagent.app;
 
 import com.yun.yunaiagent.chat.ChatHistoryService;
 import com.yun.yunaiagent.rag.LoveAppRagService;
+import com.yun.yunaiagent.service.StreamingChatService;
 import com.yun.yunaiagent.user.AppUser;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
@@ -41,17 +42,22 @@ public class LoveApp {
 
     private final ChatHistoryService chatHistoryService;
 
+    private final StreamingChatService streamingChatService;
+
     @Autowired
     public LoveApp(@Qualifier("openAiChatModel") ChatModel chatModel, LoveAppRagService ragService,
-                   ObjectProvider<ToolCallbackProvider> toolCallbackProvider, ChatHistoryService chatHistoryService) {
+                   ObjectProvider<ToolCallbackProvider> toolCallbackProvider,
+                   ChatHistoryService chatHistoryService,
+                   StreamingChatService streamingChatService) {
         this.chatClient = ChatClient.builder(chatModel).build();
         this.ragService = ragService;
         this.toolCallbackProvider = toolCallbackProvider;
         this.chatHistoryService = chatHistoryService;
+        this.streamingChatService = streamingChatService;
     }
 
     public LoveApp(ChatModel chatModel, LoveAppRagService ragService, ObjectProvider<ToolCallbackProvider> toolCallbackProvider) {
-        this(chatModel, ragService, toolCallbackProvider, null);
+        this(chatModel, ragService, toolCallbackProvider, null, null);
     }
 
     public String doChat(String message, String chatId) {
@@ -72,13 +78,10 @@ public class LoveApp {
 
     public Flux<String> doChatByStream(String message, String chatId, AppUser user) {
         String normalizedMessage = normalize(message);
-        recordUserMessage(chatId, normalizedMessage, user);
-        StringBuilder answer = new StringBuilder();
-        return basePrompt(normalizedMessage, chatId, user)
-                .stream()
-                .content()
-                .doOnNext(answer::append)
-                .doOnComplete(() -> recordAssistantMessage(chatId, answer.toString(), user));
+        return streamingChatService.streamAndPersist(
+                MODULE, chatId, normalizedMessage, user, chatHistoryService,
+                () -> basePrompt(normalizedMessage, chatId, user).stream().content()
+        );
     }
 
     public Flux<String> doChatByStreamWithImage(String message, String imageUrl, String chatId, AppUser user) {
