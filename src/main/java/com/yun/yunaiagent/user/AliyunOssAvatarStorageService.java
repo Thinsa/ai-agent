@@ -39,8 +39,8 @@ public class AliyunOssAvatarStorageService implements AvatarStorageService {
         String objectKey = buildObjectKey(username, file.getOriginalFilename());
         try {
             return objectStorageService.upload(objectKey, file.getBytes(), file.getContentType());
-        } catch (IOException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to read avatar file");
+        } catch (IOException | IllegalStateException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload avatar: " + e.getMessage());
         }
     }
 

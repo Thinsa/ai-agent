@@ -5,6 +5,8 @@ import com.aliyun.oss.OSSClientBuilder;
 import com.yun.yunaiagent.common.ValidationUtils;
 import com.aliyun.oss.model.ObjectMetadata;
 import com.yun.yunaiagent.user.AliyunOssProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,8 @@ import java.io.ByteArrayInputStream;
 @Service
 @EnableConfigurationProperties(AliyunOssProperties.class)
 public class OssObjectStorageService implements DisposableBean {
+
+    private static final Logger log = LoggerFactory.getLogger(OssObjectStorageService.class);
 
     private final AliyunOssProperties properties;
 
@@ -25,6 +29,7 @@ public class OssObjectStorageService implements DisposableBean {
 
     public String upload(String objectKey, byte[] content, String contentType) {
         validateConfig();
+        log.info("Uploading to OSS: key={}, size={} bytes, contentType={}", objectKey, content.length, contentType);
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentLength(content.length);
         metadata.setContentType(contentType);
@@ -41,6 +46,7 @@ public class OssObjectStorageService implements DisposableBean {
         if (ossClient == null) {
             synchronized (this) {
                 if (ossClient == null) {
+                    log.info("Creating OSS client: endpoint={}, bucket={}", properties.endpoint(), properties.bucket());
                     ossClient = new OSSClientBuilder().build(
                             properties.endpoint(),
                             properties.accessKeyId(),
@@ -62,6 +68,10 @@ public class OssObjectStorageService implements DisposableBean {
     private void validateConfig() {
         if (ValidationUtils.isBlank(properties.endpoint()) || ValidationUtils.isBlank(properties.bucket())
                 || ValidationUtils.isBlank(properties.accessKeyId()) || ValidationUtils.isBlank(properties.accessKeySecret())) {
+            log.warn("Aliyun OSS is not configured. endpoint={}, bucket={}, accessKeyId present={}, accessKeySecret present={}",
+                    properties.endpoint(), properties.bucket(),
+                    !ValidationUtils.isBlank(properties.accessKeyId()),
+                    !ValidationUtils.isBlank(properties.accessKeySecret()));
             throw new IllegalStateException("Aliyun OSS is not configured");
         }
     }

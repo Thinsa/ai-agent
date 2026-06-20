@@ -2,6 +2,7 @@ package com.yun.yunaiagent.controller;
 
 import com.yun.yunaiagent.chat.ChatHistoryService;
 import com.yun.yunaiagent.chat.ChatMessage;
+import com.yun.yunaiagent.common.ReasoningContentUtil;
 import com.yun.yunaiagent.common.SecurityUtils;
 import com.yun.yunaiagent.constants.Constants;
 import com.yun.yunaiagent.common.ValidationUtils;
@@ -104,10 +105,11 @@ public class StoryController {
             allMessages.addAll(history);
             allMessages.add(new UserMessage(normalizedMessage));
 
-            return ChatClient.builder(chatModel).build()
-                    .prompt(new Prompt(allMessages))
-                    .stream()
-                    .content();
+            return ReasoningContentUtil.streamWithReasoning(
+                    ChatClient.builder(chatModel).build()
+                            .prompt(new Prompt(allMessages))
+                            .stream()
+                            .chatResponse());
         });
     }
 }

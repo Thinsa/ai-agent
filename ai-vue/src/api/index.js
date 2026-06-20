@@ -161,8 +161,10 @@ export const chatStory = (message, chatId, onMessage, onError) => {
   return connectSSE('/ai/story/sse', { message, chatId }, onMessage, onError)
 }
 
-export const chatWithManus = (message, chatId) => {
-  return connectSSE('/ai/manus/chat', { message, chatId })
+export const chatWithManus = (message, chatId, imageUrl) => {
+  const params = { message, chatId }
+  if (imageUrl) params.imageUrl = imageUrl
+  return connectSSE('/ai/manus/chat', params)
 }
 
 export const chatWithManusMcp = (message, chatId, onMessage, onError) => {

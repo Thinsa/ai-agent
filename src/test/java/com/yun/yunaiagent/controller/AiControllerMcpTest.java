@@ -47,7 +47,7 @@ class ManusControllerTest {
                 mock(JwtService.class)
         );
 
-        SseEmitter emitter = controller.doChatWithManus("hello", "chat-test", null, null);
+        SseEmitter emitter = controller.doChatWithManus("hello", "chat-test", null, null, null, null);
 
         assertThat(emitter).isNotNull();
         assertThat(trackingProvider.getIfAvailableCalled).isTrue();

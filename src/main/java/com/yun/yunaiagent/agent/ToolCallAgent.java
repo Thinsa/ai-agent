@@ -1,6 +1,7 @@
 package com.yun.yunaiagent.agent;
 
 import com.yun.yunaiagent.agent.model.AgentState;
+import com.yun.yunaiagent.common.ReasoningContentUtil;
 import com.yun.yunaiagent.common.ValidationUtils;
 import com.yun.yunaiagent.constants.Constants;
 import com.yun.yunaiagent.chat.ChatHistoryService;
@@ -9,8 +10,12 @@ import com.yun.yunaiagent.tools.TerminateTool;
 import com.yun.yunaiagent.user.AppUser;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.util.MimeTypeUtils;
+import org.springframework.ai.content.Media;
 
+import java.net.URI;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,6 +36,12 @@ public class ToolCallAgent extends ReActAgent {
     private final String chatId;
 
     private final AppUser user;
+
+    /** 用户上传的图片 URL（OSS 公网可访问链接），首步作为 Media 传给视觉模型。 */
+    private volatile String imageUrl;
+
+    /** 用户上传的文件名，用于在消息中携带文件上下文。 */
+    private volatile String fileName;
 
     // Single primary constructor (package-private so YuManus in same package can call it):
     ToolCallAgent(List<AgentTool> tools, ChatModel chatModel,
@@ -53,6 +64,16 @@ public class ToolCallAgent extends ReActAgent {
     public static ToolCallAgent withToolsAndModel(List<AgentTool> tools, ChatModel chatModel,
             ToolCallbackProvider toolCallbackProvider) {
         return new ToolCallAgent(tools, chatModel, toolCallbackProvider, null, null, null);
+    }
+
+    /** 设置用户上传的图片 URL，首步 act() 会将其作为 Media 传给视觉模型。 */
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = (imageUrl != null && !imageUrl.isBlank()) ? imageUrl.trim() : null;
+    }
+
+    /** 设置用户上传的文件名，act() 会将其注入用户消息以携带文件上下文。 */
+    public void setFileName(String fileName) {
+        this.fileName = (fileName != null && !fileName.isBlank()) ? fileName.trim() : null;
     }
 
     @Override
@@ -81,6 +102,15 @@ public class ToolCallAgent extends ReActAgent {
     }
 
     @Override
+    protected String step(String userPrompt, int stepNumber) {
+        String stepResult = super.step(userPrompt, stepNumber);
+        if (imageUrl != null && stepNumber == 1) {
+            state = AgentState.FINISHED;
+        }
+        return stepResult;
+    }
+
+    @Override
     protected String think(String userPrompt, int stepNumber) {
         return "思考任务目标与可用工具。";
     }
@@ -88,12 +118,27 @@ public class ToolCallAgent extends ReActAgent {
     @Override
     protected String act(String userPrompt, int stepNumber) {
         if (chatClient != null && toolCallbackProvider != null) {
-            String response = chatClient.prompt()
-                    .system(systemPrompt())
-                    .user(normalize(userPrompt))
-                    .toolCallbacks(toolCallbackProvider)
-                    .call()
-                    .content();
+            String messageText = buildUserMessage(userPrompt);
+            ChatResponse chatResponse;
+            // 首步且存在图片 URL 时，将图片作为 Media 传给视觉模型
+            if (imageUrl != null && stepNumber == 1) {
+                chatResponse = chatClient.prompt()
+                        .system(systemPrompt())
+                        .user(userSpec -> userSpec
+                                .text(messageText)
+                                .media(new Media(MimeTypeUtils.IMAGE_PNG, URI.create(imageUrl))))
+                        .toolCallbacks(toolCallbackProvider)
+                        .call()
+                        .chatResponse();
+            } else {
+                chatResponse = chatClient.prompt()
+                        .system(systemPrompt())
+                        .user(messageText)
+                        .toolCallbacks(toolCallbackProvider)
+                        .call()
+                        .chatResponse();
+            }
+            String response = ReasoningContentUtil.withReasoning(chatResponse);
             if (response != null && response.contains("任务已终止")) {
                 state = AgentState.FINISHED;
             }
@@ -115,6 +160,20 @@ public class ToolCallAgent extends ReActAgent {
         return "当前智能体已注册工具：" + toolNames + "。任务：" + normalize(userPrompt) + System.lineSeparator() + terminateResult;
     }
 
+    /**
+     * 构建带文件上下文的用户消息。携带文件名时注入 {@code [文件: xxx]} 前缀。
+     */
+    private String buildUserMessage(String userPrompt) {
+        String message = normalize(userPrompt);
+        if (fileName != null) {
+            return "[文件: " + fileName + "] " + message;
+        }
+        if (imageUrl != null) {
+            return "[图片] " + message;
+        }
+        return message;
+    }
+
     private String systemPrompt() {
         String memory = recentMemory();
         String prompt = """
@@ -130,6 +189,8 @@ public class ToolCallAgent extends ReActAgent {
                 - If generateImage fails, just report the error and call doTerminate. Do NOT retry.
 
                 GENERAL RULES:
+                - If the user message begins with "[文件: xxx]" they have uploaded a file. Read the filename and adjust your response accordingly.
+                - If the user message begins with "[图片]" they have uploaded an image. You can see the image, so observe it carefully and describe/analyze it for the user.
                 - Keep the answer concise, include useful tool results such as image URLs.
                 - Call doTerminate when the task is complete.
                 - Never write Python scripts or shell commands to generate images.

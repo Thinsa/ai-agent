@@ -196,7 +196,7 @@ const buildPrompt = message => {
   return parts.join('\n')
 }
 
-const runStreamChat = (message, useMcp) => {
+const runStreamChat = (message, useMcp, imageUrl = null) => {
   const aiMessageIndex = messages.value.length
   addMessage('', false, { modeLabel: activeModeLabel(false) })
   connectionStatus.value = 'connecting'
@@ -234,7 +234,7 @@ const runStreamChat = (message, useMcp) => {
 
   eventSource = useMcp
     ? chatWithManusMcp(message, chatId.value, onMessage, onError)
-    : chatWithManus(message, chatId.value)
+    : chatWithManus(message, chatId.value, imageUrl)
 
   if (!useMcp) {
     eventSource.onmessage = event => onMessage(event.data)
@@ -244,11 +244,12 @@ const runStreamChat = (message, useMcp) => {
 
 const sendMessage = payload => {
   const text = typeof payload === 'string' ? payload : payload.text
+  const imageUrl = typeof payload === 'string' ? null : payload.imageUrl
   const useMcp = mcpEnabled.value
   streamPaused.value = false
   addMessage(text, true, { modeLabel: activeModeLabel(true) })
   closeStream()
-  runStreamChat(buildPrompt(text), useMcp)
+  runStreamChat(buildPrompt(text), useMcp, visionEnabled.value ? imageUrl : null)
 }
 
 onMounted(() => {

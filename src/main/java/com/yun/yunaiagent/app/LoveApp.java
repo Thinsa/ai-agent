@@ -1,12 +1,14 @@
 package com.yun.yunaiagent.app;
 
 import com.yun.yunaiagent.chat.ChatHistoryService;
+import com.yun.yunaiagent.common.ReasoningContentUtil;
 import com.yun.yunaiagent.constants.Constants;
 import com.yun.yunaiagent.rag.LoveAppRagService;
 import com.yun.yunaiagent.service.StreamingChatService;
 import com.yun.yunaiagent.user.AppUser;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,7 +73,7 @@ public class LoveApp {
     public String doChat(String message, String chatId, AppUser user) {
         String normalizedMessage = normalize(message);
         recordUserMessage(chatId, normalizedMessage, user);
-        String content = basePrompt(normalizedMessage, chatId, user).call().content();
+        String content = callWithReasoning(basePrompt(normalizedMessage, chatId, user));
         recordAssistantMessage(chatId, content, user);
         return content;
     }
@@ -84,7 +86,8 @@ public class LoveApp {
         String normalizedMessage = normalize(message);
         return streamingChatService.streamAndPersist(
                 MODULE, chatId, normalizedMessage, user, chatHistoryService,
-                () -> basePrompt(normalizedMessage, chatId, user).stream().content()
+                () -> ReasoningContentUtil.streamWithReasoning(
+                        basePrompt(normalizedMessage, chatId, user).stream().chatResponse())
         );
     }
 
@@ -92,13 +95,14 @@ public class LoveApp {
         String normalizedMessage = normalize(message);
         recordUserMessage(chatId, "[图片] " + normalizedMessage, user);
         StringBuilder answer = new StringBuilder();
-        return chatClient.prompt()
-                .system(systemPromptWithImage())
-                .user(userSpec -> userSpec
-                        .text(normalizedMessage)
-                        .media(new Media(MimeTypeUtils.IMAGE_PNG, URI.create(imageUrl))))
-                .stream()
-                .content()
+        return ReasoningContentUtil.streamWithReasoning(
+                chatClient.prompt()
+                        .system(systemPromptWithImage())
+                        .user(userSpec -> userSpec
+                                .text(normalizedMessage)
+                                .media(new Media(MimeTypeUtils.IMAGE_PNG, URI.create(imageUrl))))
+                        .stream()
+                        .chatResponse())
                 .doOnNext(answer::append)
                 .doOnComplete(() -> {
                     if (chatHistoryService != null) {
@@ -109,10 +113,10 @@ public class LoveApp {
     }
 
     public LoveReport doChatWithReport(String message, String chatId) {
-        String content = basePrompt("""
+        String content = callWithReasoning(basePrompt("""
                 请基于用户问题生成一份结构化恋爱建议报告，包含标题、摘要和三条建议。
                 用户问题：%s
-                """.formatted(normalize(message)), chatId).call().content();
+                """.formatted(normalize(message)), chatId));
         return new LoveReport("恋爱建议报告", content, List.of("保持真诚沟通", "尊重对方边界", "必要时寻求专业帮助"));
     }
 
@@ -124,13 +128,13 @@ public class LoveApp {
         String normalizedMessage = normalize(message);
         recordUserMessage(chatId, normalizedMessage, user);
         String context = ragService.retrieveContext(normalizedMessage);
-        String content = basePrompt("""
+        String content = callWithReasoning(basePrompt("""
                 请优先参考以下知识库内容回答。
                 知识库：
                 %s
 
                 用户问题：%s
-                """.formatted(context, normalizedMessage), chatId, user).call().content();
+                """.formatted(context, normalizedMessage), chatId, user));
         recordAssistantMessage(chatId, content, user);
         return content;
     }
@@ -140,10 +144,8 @@ public class LoveApp {
         if (provider == null) {
             return "工具调用失败：未注册工具。";
         }
-        return basePrompt(normalize(message), chatId)
-                .toolCallbacks(provider)
-                .call()
-                .content();
+        return callWithReasoning(basePrompt(normalize(message), chatId)
+                .toolCallbacks(provider));
     }
 
     public String doChatWithMcp(String message, String chatId) {
@@ -151,10 +153,8 @@ public class LoveApp {
         if (provider == null) {
             return "MCP 调用失败：未配置 MCP 工具提供者。";
         }
-        return basePrompt("请在需要时使用 MCP 工具回答：" + normalize(message), chatId)
-                .toolCallbacks(provider)
-                .call()
-                .content();
+        return callWithReasoning(basePrompt("请在需要时使用 MCP 工具回答：" + normalize(message), chatId)
+                .toolCallbacks(provider));
     }
 
     private ChatClient.ChatClientRequestSpec basePrompt(String message, String chatId) {
@@ -165,6 +165,11 @@ public class LoveApp {
         return chatClient.prompt()
                 .system(systemPromptWithMemory(chatId, user))
                 .user(normalize(message));
+    }
+
+    private String callWithReasoning(ChatClient.ChatClientRequestSpec spec) {
+        ChatResponse response = spec.call().chatResponse();
+        return ReasoningContentUtil.withReasoning(response);
     }
 
     private String systemPromptWithMemory(String chatId, AppUser user) {

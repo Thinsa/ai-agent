@@ -52,10 +52,14 @@ public class ManusController {
      */
     @GetMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter doChatWithManus(String message, String chatId,
+            @RequestParam(required = false) String imageUrl,
+            @RequestParam(required = false) String fileName,
             @RequestParam(required = false) String token, Authentication authentication) {
         YuManus yuManus = new YuManus(allTools, chatModel,
                 toolCallbackProvider.getIfAvailable(), chatHistoryService, chatId,
                 SecurityUtils.currentUser(authentication, token, jwtService, userService));
+        yuManus.setImageUrl(imageUrl);
+        yuManus.setFileName(fileName);
         return yuManus.runStream(message);
     }
 

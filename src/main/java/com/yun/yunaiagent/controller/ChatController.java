@@ -1,6 +1,7 @@
 package com.yun.yunaiagent.controller;
 
 import com.yun.yunaiagent.chat.ChatHistoryService;
+import com.yun.yunaiagent.common.ReasoningContentUtil;
 import com.yun.yunaiagent.common.SecurityUtils;
 import com.yun.yunaiagent.common.ValidationUtils;
 import com.yun.yunaiagent.security.JwtService;
@@ -9,10 +10,12 @@ import com.yun.yunaiagent.tools.OssObjectStorageService;
 import com.yun.yunaiagent.user.UserService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.content.Media;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -55,14 +59,40 @@ public class ChatController {
 
     @GetMapping(value = "/chat/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> doChatBasic(String message, String chatId,
+            @RequestParam(required = false) String imageUrl,
+            @RequestParam(required = false) String fileName,
             @RequestParam(required = false) String token, Authentication authentication) {
         var user = SecurityUtils.currentUser(authentication, token, jwtService, userService);
-        return streamingChatService.streamAndPersist("chat", chatId, message, user, chatHistoryService, () ->
-                ChatClient.builder(chatModel).build().prompt()
-                        .system("你是灵语 Spark，LinkMind 灵桥的日常对话伙伴。请用友好、自然的中文回答用户的问题，保持回答简洁有温度。")
-                        .user(ValidationUtils.normalize(message, "空消息"))
-                        .stream()
-                        .content());
+        String userMessage = buildChatUserMessage(message, fileName, imageUrl);
+        String effectiveImageUrl = (imageUrl != null && !imageUrl.isBlank()) ? imageUrl.trim() : null;
+
+        return streamingChatService.streamAndPersist("chat", chatId, userMessage, user, chatHistoryService, () -> {
+            ChatClient.ChatClientRequestSpec prompt = ChatClient.builder(chatModel).build().prompt()
+                    .system("你是灵语 Spark，LinkMind 灵桥的日常对话伙伴。请用友好、自然的中文回答用户的问题，保持回答简洁有温度。"
+                            + (effectiveImageUrl != null ? " 用户上传了图片，请仔细观察图片内容并结合图片回答用户问题。" : ""));
+
+            if (effectiveImageUrl != null) {
+                prompt = prompt.user(userSpec -> userSpec
+                        .text(userMessage)
+                        .media(new Media(MimeTypeUtils.IMAGE_PNG, URI.create(effectiveImageUrl))));
+            } else {
+                prompt = prompt.user(userMessage);
+            }
+
+            return ReasoningContentUtil.streamWithReasoning(
+                    prompt.stream().chatResponse());
+        });
+    }
+
+    private String buildChatUserMessage(String message, String fileName, String imageUrl) {
+        String msg = ValidationUtils.normalize(message, "空消息");
+        if (fileName != null && !fileName.isBlank()) {
+            return "[文件: " + fileName.trim() + "] " + msg;
+        }
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            return "[图片] " + msg;
+        }
+        return msg;
     }
 
     @PostMapping("/upload")
@@ -117,7 +147,7 @@ public class ChatController {
                     "preview", preview,
                     "isImage", "false"
             );
-        } catch (IOException e) {
+        } catch (IOException | IllegalStateException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Upload failed: " + e.getMessage(), e);
         }
     }
