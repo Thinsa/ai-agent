@@ -23,10 +23,12 @@ public class JwtService {
             @Value("${app.jwt.secret:}") String secret,
             @Value("${app.jwt.expiration:86400000}") long expirationMillis
     ) {
-        String resolvedSecret = secret == null || secret.length() < 32
-                ? "local-development-secret-key-change-me-please"
-                : secret;
-        this.secretKey = Keys.hmacShaKeyFor(resolvedSecret.getBytes(StandardCharsets.UTF_8));
+        if (secret == null || secret.length() < 32) {
+            throw new IllegalStateException(
+                    "app.jwt.secret must be configured with at least 32 characters. " +
+                    "Set the APP_JWT_SECRET environment variable.");
+        }
+        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMillis = expirationMillis;
     }
 
