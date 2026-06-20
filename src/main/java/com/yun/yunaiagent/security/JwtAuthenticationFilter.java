@@ -24,12 +24,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        String token = null;
+
+        // 1. Authorization header (existing behavior)
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
+            token = header.substring(7);
+        }
+
+        // 2. Fallback to ?token= query parameter (supports SSE EventSource)
+        if (token == null) {
+            String tokenParam = request.getParameter("token");
+            if (tokenParam != null && !tokenParam.isBlank()) {
+                token = tokenParam;
+            }
+        }
+
+        if (token != null) {
             try {
-                String username = jwtService.parseUsername(header.substring(7));
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(username, null, List.of());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                String username = jwtService.parseUsername(token);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(username, null, List.of());
+                authentication.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (Exception ignored) {
                 SecurityContextHolder.clearContext();
