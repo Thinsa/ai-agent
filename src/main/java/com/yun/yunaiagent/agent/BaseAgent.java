@@ -1,6 +1,7 @@
 package com.yun.yunaiagent.agent;
 
 import com.yun.yunaiagent.agent.model.AgentState;
+import com.yun.yunaiagent.common.ValidationUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -138,9 +139,6 @@ public abstract class BaseAgent {
      * 规范化用户输入，确保后续步骤总能拿到可读的任务描述。
      */
     protected String normalize(String prompt) {
-        if (prompt == null || prompt.isBlank()) {
-            return "空任务";
-        }
-        return prompt.trim();
+        return ValidationUtils.normalize(prompt, "空任务");
     }
 }

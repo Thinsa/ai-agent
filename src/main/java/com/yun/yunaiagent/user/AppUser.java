@@ -1,5 +1,6 @@
 package com.yun.yunaiagent.user;
 
+import com.yun.yunaiagent.common.ValidationUtils;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -72,10 +73,7 @@ public class AppUser {
     }
 
     private String normalize(String value, String fallback) {
-        if (value == null || value.isBlank()) {
-            return fallback;
-        }
-        return value.trim();
+        return ValidationUtils.normalize(value, fallback);
     }
 
     public Long getId() {

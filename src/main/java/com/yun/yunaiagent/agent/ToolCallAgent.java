@@ -1,6 +1,7 @@
 package com.yun.yunaiagent.agent;
 
 import com.yun.yunaiagent.agent.model.AgentState;
+import com.yun.yunaiagent.common.ValidationUtils;
 import com.yun.yunaiagent.chat.ChatHistoryService;
 import com.yun.yunaiagent.tools.AgentTool;
 import com.yun.yunaiagent.tools.TerminateTool;
@@ -44,7 +45,7 @@ public class ToolCallAgent extends ReActAgent {
         this.chatClient = chatModel == null ? null : ChatClient.builder(chatModel).build();
         this.toolCallbackProvider = toolCallbackProvider;
         this.chatHistoryService = chatHistoryService;
-        this.chatId = chatId == null || chatId.isBlank() ? "default" : chatId.trim();
+        this.chatId = ValidationUtils.normalize(chatId, "default");
         this.user = user;
     }
 
