@@ -32,22 +32,27 @@ public class ToolCallAgent extends ReActAgent {
 
     private final AppUser user;
 
-    public ToolCallAgent(List<AgentTool> tools) {
-        this(tools, null, null, null, null, null);
-    }
-
-    public ToolCallAgent(List<AgentTool> tools, ChatModel chatModel, ToolCallbackProvider toolCallbackProvider) {
-        this(tools, chatModel, toolCallbackProvider, null, null, null);
-    }
-
-    public ToolCallAgent(List<AgentTool> tools, ChatModel chatModel, ToolCallbackProvider toolCallbackProvider,
-                         ChatHistoryService chatHistoryService, String chatId, AppUser user) {
+    // Single primary constructor (package-private so YuManus in same package can call it):
+    ToolCallAgent(List<AgentTool> tools, ChatModel chatModel,
+                  ToolCallbackProvider toolCallbackProvider,
+                  ChatHistoryService chatHistoryService, String chatId, AppUser user) {
         this.tools = tools;
         this.chatClient = chatModel == null ? null : ChatClient.builder(chatModel).build();
         this.toolCallbackProvider = toolCallbackProvider;
         this.chatHistoryService = chatHistoryService;
         this.chatId = ValidationUtils.normalize(chatId, "default");
         this.user = user;
+    }
+
+    // Convenience factory for tests and simple usage:
+    public static ToolCallAgent withTools(List<AgentTool> tools) {
+        return new ToolCallAgent(tools, null, null, null, null, null);
+    }
+
+    // Convenience factory with model and tool provider:
+    public static ToolCallAgent withToolsAndModel(List<AgentTool> tools, ChatModel chatModel,
+            ToolCallbackProvider toolCallbackProvider) {
+        return new ToolCallAgent(tools, chatModel, toolCallbackProvider, null, null, null);
     }
 
     @Override

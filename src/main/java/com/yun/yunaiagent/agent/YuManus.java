@@ -10,19 +10,22 @@ import java.util.List;
 
 public class YuManus extends ToolCallAgent {
 
-    public YuManus(List<AgentTool> tools) {
-        super(tools);
-        this.maxSteps = 20;
-    }
-
-    public YuManus(List<AgentTool> tools, ChatModel chatModel, ToolCallbackProvider toolCallbackProvider) {
-        super(tools, chatModel, toolCallbackProvider);
-        this.maxSteps = 20;
-    }
-
-    public YuManus(List<AgentTool> tools, ChatModel chatModel, ToolCallbackProvider toolCallbackProvider,
+    // Single primary constructor:
+    public YuManus(List<AgentTool> tools, ChatModel chatModel,
+                   ToolCallbackProvider toolCallbackProvider,
                    ChatHistoryService chatHistoryService, String chatId, AppUser user) {
         super(tools, chatModel, toolCallbackProvider, chatHistoryService, chatId, user);
         this.maxSteps = 20;
+    }
+
+    // Convenience factory:
+    public static YuManus withTools(List<AgentTool> tools) {
+        return new YuManus(tools, null, null, null, null, null);
+    }
+
+    // Convenience factory with model and tool provider:
+    public static YuManus withToolsAndModel(List<AgentTool> tools, ChatModel chatModel,
+            ToolCallbackProvider toolCallbackProvider) {
+        return new YuManus(tools, chatModel, toolCallbackProvider, null, null, null);
     }
 }

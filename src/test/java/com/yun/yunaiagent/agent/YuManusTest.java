@@ -21,7 +21,7 @@ class YuManusTest {
 
     @Test
     void runListsToolsAndTerminatesWhenTerminateToolIsAvailable() {
-        YuManus yuManus = new YuManus(List.of(new TerminateTool()));
+        YuManus yuManus = YuManus.withTools(List.of(new TerminateTool()));
 
         String result = yuManus.run("完成后终止");
 
@@ -42,7 +42,7 @@ class YuManusTest {
                 return "自定义工具";
             }
         };
-        YuManus yuManus = new YuManus(List.of(customTool));
+        YuManus yuManus = YuManus.withTools(List.of(customTool));
 
         assertThat(yuManus.run("列出工具")).contains("customTool");
     }
