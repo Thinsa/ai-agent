@@ -12,8 +12,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Map;
-
+import static com.yun.yunaiagent.common.TestAuthHelper.registerAndLogin;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -55,7 +54,7 @@ class BackgroundControllerTest {
 
     @Test
     void savesBackgroundViaMultipartAndReadsItBack() throws Exception {
-        String token = registerAndLogin("bg-user-mp");
+        String token = registerAndLogin(mockMvc, objectMapper,"bg-user-mp");
         when(ossObjectStorageService.upload(any(), any(), eq("image/png")))
                 .thenReturn("https://yuc-ai.oss-cn-beijing.aliyuncs.com/backgrounds/bg-user-mp/love/bg.png");
 
@@ -80,7 +79,7 @@ class BackgroundControllerTest {
 
     @Test
     void updatesOpacityViaJson() throws Exception {
-        String token = registerAndLogin("opacity-user-mp");
+        String token = registerAndLogin(mockMvc, objectMapper,"opacity-user-mp");
         when(ossObjectStorageService.upload(any(), any(), eq("image/png")))
                 .thenReturn("https://yuc-ai.oss-cn-beijing.aliyuncs.com/backgrounds/opacity-user-mp/super/bg.png");
 
@@ -104,7 +103,7 @@ class BackgroundControllerTest {
 
     @Test
     void deletesBackground() throws Exception {
-        String token = registerAndLogin("delete-user-mp");
+        String token = registerAndLogin(mockMvc, objectMapper,"delete-user-mp");
         when(ossObjectStorageService.upload(any(), any(), eq("image/png")))
                 .thenReturn("https://yuc-ai.oss-cn-beijing.aliyuncs.com/backgrounds/delete-user-mp/love/bg.png");
 
@@ -129,7 +128,7 @@ class BackgroundControllerTest {
 
     @Test
     void rejectsEmptyFile() throws Exception {
-        String token = registerAndLogin("empty-file-user");
+        String token = registerAndLogin(mockMvc, objectMapper,"empty-file-user");
         MockMultipartFile emptyFile = new MockMultipartFile(
                 "file", "empty.png", "image/png", new byte[0]);
 
@@ -138,30 +137,5 @@ class BackgroundControllerTest {
                         .param("opacity", "0.3")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest());
-    }
-
-    private String registerAndLogin(String username) throws Exception {
-        mockMvc.perform(post("/user/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "username", username,
-                                "password", "password123",
-                                "displayName", username,
-                                "email", username + "@example.com"
-                        ))))
-                .andExpect(status().isOk());
-
-        String loginResponse = mockMvc.perform(post("/user/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "username", username,
-                                "password", "password123"
-                        ))))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        return objectMapper.readTree(loginResponse).get("token").asText();
     }
 }

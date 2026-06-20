@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
 
+import static com.yun.yunaiagent.common.TestAuthHelper.registerAndLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -41,7 +42,7 @@ class StorySaveControllerTest {
 
     @Test
     void createsAndListsSaves() throws Exception {
-        String token = registerAndLogin("save-tester");
+        String token = registerAndLogin(mockMvc, objectMapper,"save-tester");
 
         // 创建存档
         mockMvc.perform(post("/story-saves")
@@ -64,7 +65,7 @@ class StorySaveControllerTest {
 
     @Test
     void deletesSave() throws Exception {
-        String token = registerAndLogin("delete-save-tester");
+        String token = registerAndLogin(mockMvc, objectMapper,"delete-save-tester");
 
         String response = mockMvc.perform(post("/story-saves")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -87,30 +88,5 @@ class StorySaveControllerTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
-    }
-
-    private String registerAndLogin(String username) throws Exception {
-        mockMvc.perform(post("/user/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "username", username,
-                                "password", "password123",
-                                "displayName", username,
-                                "email", username + "@example.com"
-                        ))))
-                .andExpect(status().isOk());
-
-        String loginResponse = mockMvc.perform(post("/user/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "username", username,
-                                "password", "password123"
-                        ))))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        return objectMapper.readTree(loginResponse).get("token").asText();
     }
 }

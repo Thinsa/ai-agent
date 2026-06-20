@@ -8,10 +8,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import java.util.Map;
 
+import static com.yun.yunaiagent.common.TestAuthHelper.registerAndLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -38,7 +37,7 @@ class StoryControllerTest {
 
     @Test
     void storyEndpointStartsStreamWithStartMessage() throws Exception {
-        String token = registerAndLogin("story-tester");
+        String token = registerAndLogin(mockMvc, objectMapper,"story-tester");
 
         mockMvc.perform(get("/ai/story/sse")
                         .param("message", "开始")
@@ -50,7 +49,7 @@ class StoryControllerTest {
 
     @Test
     void storyEndpointAcceptsThemeParam() throws Exception {
-        String token = registerAndLogin("wuxia-tester");
+        String token = registerAndLogin(mockMvc, objectMapper,"wuxia-tester");
 
         mockMvc.perform(get("/ai/story/sse")
                         .param("message", "武侠江湖恩怨")
@@ -62,7 +61,7 @@ class StoryControllerTest {
 
     @Test
     void storyEndpointSavesMessagesToHistory() throws Exception {
-        String token = registerAndLogin("history-tester");
+        String token = registerAndLogin(mockMvc, objectMapper,"history-tester");
 
         // 发送第一条消息
         mockMvc.perform(get("/ai/story/sse")
@@ -76,30 +75,5 @@ class StoryControllerTest {
         mockMvc.perform(get("/ai/history/sessions/story_history_1")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
-    }
-
-    private String registerAndLogin(String username) throws Exception {
-        mockMvc.perform(post("/user/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "username", username,
-                                "password", "password123",
-                                "displayName", username,
-                                "email", username + "@example.com"
-                        ))))
-                .andExpect(status().isOk());
-
-        String loginResponse = mockMvc.perform(post("/user/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "username", username,
-                                "password", "password123"
-                        ))))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        return objectMapper.readTree(loginResponse).get("token").asText();
     }
 }

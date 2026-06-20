@@ -2,20 +2,16 @@ package com.yun.yunaiagent.chat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yun.yunaiagent.user.AppUser;
-import com.yun.yunaiagent.user.UserDtos;
 import com.yun.yunaiagent.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Map;
-
+import static com.yun.yunaiagent.common.TestAuthHelper.registerAndLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -49,8 +45,8 @@ class ChatHistoryControllerTest {
 
     @Test
     void listSessionsUsesCurrentJwtUserAndDetailBlocksOtherUsersConversation() throws Exception {
-        String aliceToken = registerAndLogin("alice");
-        String bobToken = registerAndLogin("bob");
+        String aliceToken = registerAndLogin(mockMvc, objectMapper,"alice");
+        String bobToken = registerAndLogin(mockMvc, objectMapper,"bob");
         AppUser alice = userService.findByUsername("alice");
         AppUser bob = userService.findByUsername("bob");
 
@@ -77,8 +73,8 @@ class ChatHistoryControllerTest {
 
     @Test
     void detailEndpointUsesModuleAndCurrentUserWhenChatIdMatches() throws Exception {
-        String aliceToken = registerAndLogin("same-detail-alice");
-        String bobToken = registerAndLogin("same-detail-bob");
+        String aliceToken = registerAndLogin(mockMvc, objectMapper,"same-detail-alice");
+        String bobToken = registerAndLogin(mockMvc, objectMapper,"same-detail-bob");
         AppUser alice = userService.findByUsername("same-detail-alice");
         AppUser bob = userService.findByUsername("same-detail-bob");
 
@@ -106,26 +102,5 @@ class ChatHistoryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.module").value("super"))
                 .andExpect(jsonPath("$.messages[0].content").value("Alice super question"));
-    }
-
-    private String registerAndLogin(String username) throws Exception {
-        mockMvc.perform(post("/user/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "username", username,
-                                "password", "password123",
-                                "displayName", username,
-                                "email", username + "@example.com"
-                        ))))
-                .andExpect(status().isOk());
-
-        String response = mockMvc.perform(post("/user/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("username", username, "password", "password123"))))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-        return objectMapper.readTree(response).get("token").asText();
     }
 }
