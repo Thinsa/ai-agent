@@ -1,9 +1,10 @@
-﻿<template>
+<template>
   <main class="profile-page">
-    <header class="topbar">
-      <button class="back-button" type="button" @click="router.push('/')">返回首页</button>
-      <button class="logout-button" type="button" @click="handleLogout">退出登录</button>
-    </header>
+    <PageHeader title="个人中心" :show-back="false">
+      <template #actions>
+        <button class="logout-button" type="button" @click="handleLogout">退出登录</button>
+      </template>
+    </PageHeader>
 
     <section class="profile-layout">
       <aside class="profile-summary">
@@ -80,6 +81,7 @@
 import { computed, reactive, ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead } from '@vueuse/head'
+import PageHeader from '../components/PageHeader.vue'
 import { currentUser, logout, updateUser, uploadAvatar } from '../stores/userStore'
 
 useHead({
@@ -190,7 +192,7 @@ const handleLogout = async () => {
 
 <style scoped>
 .profile-page {
-  min-height: 100vh; padding: 24px;
+  min-height: 100vh;
   color: var(--color-text-1);
   background: var(--color-base-0);
   position: relative;
@@ -201,12 +203,12 @@ const handleLogout = async () => {
     radial-gradient(circle at 20% 20%, rgba(126,200,224,0.08), transparent 45%),
     radial-gradient(circle at 80% 80%, rgba(180,160,232,0.08), transparent 45%);
 }
-.topbar {
-  width: min(1120px, 100%); margin: 0 auto 22px;
-  display: flex; justify-content: space-between; gap: 12px;
-  position: relative; z-index: 1;
+
+.profile-page :deep(.page-header) {
+  width: min(1120px, 100%); margin: 0 auto;
 }
-.back-button, .logout-button, .primary-button, .ghost-button {
+
+.logout-button, .primary-button, .ghost-button {
   min-height: 44px; border: 0; padding: 0 18px;
   font-weight: 700; cursor: pointer;
   border-radius: var(--radius-md);
@@ -215,7 +217,7 @@ const handleLogout = async () => {
               box-shadow var(--duration-fast) var(--ease-out);
   font-family: var(--font-body);
 }
-.back-button, .ghost-button {
+.ghost-button {
   color: var(--color-text-1);
   border: var(--border-subtle);
   background: var(--glass-card);
@@ -302,12 +304,12 @@ const handleLogout = async () => {
 .success-message { margin: 0; color: #7ec8a0; }
 .error-message { margin: 0; color: #f0a0a0; }
 
-.back-button:hover, .logout-button:hover, .primary-button:hover, .ghost-button:hover {
+.logout-button:hover, .primary-button:hover, .ghost-button:hover {
   transform: translateY(-2px);
 }
-.back-button:hover, .ghost-button:hover { border-color: rgba(255,255,255,0.14); }
+.ghost-button:hover { border-color: rgba(255,255,255,0.14); }
 .primary-button:hover { box-shadow: 0 6px 24px rgba(240,192,96,0.24); }
-.back-button:focus-visible, .logout-button:focus-visible,
+.logout-button:focus-visible,
 .primary-button:focus-visible, .ghost-button:focus-visible {
   outline: 3px solid rgba(240,192,96,0.30); outline-offset: 2px;
 }
@@ -318,7 +320,6 @@ const handleLogout = async () => {
 }
 @media (max-width: 520px) {
   .profile-page { padding: 16px; }
-  .topbar { flex-direction: column; }
   .profile-summary, .edit-panel { padding: 24px; }
 }
 </style>

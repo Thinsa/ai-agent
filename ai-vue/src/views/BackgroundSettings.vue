@@ -1,10 +1,6 @@
 <template>
   <div class="settings-page">
-    <div class="header">
-      <button class="back-button" type="button" @click="goBack">返回</button>
-      <h1 class="title">背景设置</h1>
-      <div class="header-actions" />
-    </div>
+    <PageHeader title="背景设置" back-to="/user-profile" />
 
     <div class="content">
       <div class="agent-tabs">
@@ -113,7 +109,7 @@
           </div>
         </div>
 
-        <button type="button" class="save-btn" @click="goBack">
+        <button type="button" class="save-btn" @click="$router.push('/')">
           返回首页
         </button>
       </div>
@@ -123,16 +119,14 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useHead } from '@vueuse/head'
+import PageHeader from '../components/PageHeader.vue'
 import { getBackground, refreshBackgrounds } from '../stores/bgStore'
 import { saveBackground, updateBackgroundOpacity, deleteBackground } from '../api'
 
 useHead({
   title: '背景设置 - LinkMind 灵桥'
 })
-
-const router = useRouter()
 
 const agents = [
   { key: 'love', name: '知心 Soul', color: '#e91e63' },
@@ -211,10 +205,6 @@ const removeBg = async () => {
     console.error('Delete background failed:', e)
   }
 }
-
-const goBack = () => {
-  router.push('/')
-}
 </script>
 
 <style scoped>
@@ -222,25 +212,6 @@ const goBack = () => {
   display: flex; flex-direction: column; height: 100vh;
   background: var(--color-base-0); overflow: hidden;
 }
-.header {
-  display: grid; flex: 0 0 auto;
-  grid-template-columns: 1fr auto 1fr; align-items: center;
-  padding: 12px 18px;
-  background: var(--glass-card);
-  backdrop-filter: blur(var(--blur-header));
-  border-bottom: var(--border-subtle);
-  color: var(--color-text-1); z-index: 10;
-}
-.back-button {
-  display: inline-flex; align-items: center; justify-self: start;
-  border: 0; background: transparent; color: var(--color-text-2);
-  cursor: pointer; font-size: 16px;
-  transition: color var(--duration-fast) var(--ease-out);
-}
-.back-button:hover { color: var(--color-glow); }
-.back-button::before { content: '<'; margin-right: 8px; }
-.title { justify-self: center; margin: 0; font-size: 20px; font-weight: bold; }
-.header-actions { display: flex; justify-self: end; }
 
 .content {
   flex: 1; overflow-y: auto; padding: 24px;

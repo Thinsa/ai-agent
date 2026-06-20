@@ -1,9 +1,7 @@
 <template>
   <div class="love-master-container">
-    <div class="header">
-      <button class="back-button" type="button" @click="goBack">返回</button>
-      <h1 class="title">知心 Soul</h1>
-      <div class="header-actions">
+    <PageHeader title="知心 Soul" back-to="/" gradient="var(--gradient-soul)">
+      <template #actions>
         <div class="chat-id">会话ID: {{ chatId }}</div>
         <button
           class="settings-toggle-button"
@@ -19,8 +17,8 @@
           </svg>
           <span>设置</span>
         </button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <div class="content-wrapper" :class="{ 'settings-open': settingsOpen }">
       <AgentSettingsPanel
@@ -76,12 +74,13 @@
 
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useHead } from '@vueuse/head'
+import PageHeader from '../components/PageHeader.vue'
 import AgentSettingsPanel from '../components/AgentSettingsPanel.vue'
 import ChatHistorySidebar from '../components/ChatHistorySidebar.vue'
 import ChatRoom from '../components/ChatRoom.vue'
 import KnowledgeDocManager from '../components/KnowledgeDocManager.vue'
+import { useSseChat } from '../composables/useSseChat'
 import { chatWithLoveApp, chatWithLoveAppMcp, chatWithLoveAppRag, getChatHistory, listChatSessions, getKnowledgeDocumentCount } from '../api'
 
 useHead({
@@ -98,7 +97,8 @@ useHead({
   ]
 })
 
-const router = useRouter()
+const { connectionStatus, streamPaused } = useSseChat()
+
 const messages = ref([])
 const chatId = ref('')
 const settingsOpen = ref(false)
@@ -109,8 +109,6 @@ const mcpEnabled = ref(false)
 const knowledgeEnabled = ref(false)
 const visionEnabled = ref(false)
 const customPrompt = ref('')
-const connectionStatus = ref('disconnected')
-const streamPaused = ref(false)
 const historySessions = ref([])
 const historyLoading = ref(false)
 let eventSource = null
@@ -325,10 +323,6 @@ const sendMessage = payload => {
   runStandardChat(text, visionEnabled.value ? imageUrl : null)
 }
 
-const goBack = () => {
-  router.push('/')
-}
-
 const fetchKnowledgeDocCount = async () => {
   try {
     const count = await getKnowledgeDocumentCount()
@@ -358,33 +352,7 @@ onBeforeUnmount(() => {
   display: flex; flex-direction: column; height: 100vh; min-height: 0; overflow: hidden;
   background: var(--color-base-0);
 }
-.header {
-  display: grid; flex: 0 0 auto;
-  grid-template-columns: 1fr auto 1fr; align-items: center;
-  padding: 12px 18px;
-  background: var(--glass-card);
-  backdrop-filter: blur(var(--blur-header));
-  border-bottom: var(--border-subtle);
-  color: var(--color-text-1);
-  z-index: 10;
-}
-.back-button {
-  display: inline-flex; align-items: center; justify-self: start;
-  border: 0; background: transparent; color: var(--color-text-2);
-  cursor: pointer; font-size: 16px;
-  transition: color var(--duration-fast) var(--ease-out);
-}
-.back-button:hover { color: var(--color-glow); }
-.back-button::before { content: '<'; margin-right: 8px; }
-.title {
-  justify-self: center; margin: 0; text-align: center;
-  font-size: 20px; font-weight: bold;
-  background: var(--gradient-soul);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
 .chat-id { font-size: 14px; opacity: 0.88; color: var(--color-text-2); }
-.header-actions { display: flex; align-items: center; justify-self: end; gap: 12px; min-width: 0; }
 .content-wrapper { position: relative; display: flex; flex: 1; min-height: 0; flex-direction: row; gap: 0; padding: 0; overflow: hidden; }
 .chat-area { position: relative; display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
 .settings-open .chat-area { flex: 0 0 50%; }
@@ -408,17 +376,12 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .header { padding: 12px 16px; }
-  .title { font-size: 18px; }
   .chat-id { font-size: 12px; }
   .content-wrapper { flex-direction: column; padding: 0; }
   .settings-open .chat-area { flex: 1; }
   .settings-toggle-button span, .chat-id { display: none; }
 }
 @media (max-width: 480px) {
-  .header { padding: 10px 12px; }
-  .back-button { font-size: 14px; }
-  .title { font-size: 16px; }
   .settings-toggle-button { min-width: 44px; min-height: 36px; }
 }
 </style>
