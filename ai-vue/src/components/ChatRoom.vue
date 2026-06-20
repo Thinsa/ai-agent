@@ -144,6 +144,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import AiAvatarFallback from './AiAvatarFallback.vue'
 import { getBackground } from '../stores/bgStore'
 import { uploadFile } from '../api'
+import { extractStoryMeta, getStoryText, getStoryChoices, isStoryEnding } from '../utils/storyParser'
 
 const props = defineProps({
   messages: {
@@ -209,51 +210,6 @@ const extractImageUrls = (content) => {
   const imageUrlPattern = /https?:\/\/\S+\.(?:png|jpe?g|webp|gif)(?:\?\S*)?/gi
   const matches = content.match(imageUrlPattern) || []
   return [...new Set(matches)]
-}
-
-const extractStoryMeta = (content) => {
-  if (!content) return { text: '', choices: [], isEnding: false }
-  const choiceIdx = content.indexOf('【选项】')
-  const endingIdx = content.indexOf('【结局】')
-  const isEnding = endingIdx >= 0
-
-  // 分离正文和选项
-  let text = content
-  let choices = []
-
-  // 处理【结局】标记：移除标记本身，保留结局文字
-  if (isEnding) {
-    text = content.replace('【结局】', '').trim()
-    return { text, choices: [], isEnding: true }
-  }
-
-  // 处理【选项】标记：提取正文和选项列表
-  if (choiceIdx >= 0) {
-    text = content.substring(0, choiceIdx).trim()
-    const choicesSection = content.substring(choiceIdx + '【选项】'.length)
-    // 解析编号选项：匹配 "1. 选项描述" 格式
-    const choiceLines = choicesSection.split('\n')
-    for (const line of choiceLines) {
-      const match = line.match(/^(\d+)\.\s*(.+)/)
-      if (match) {
-        choices.push({ number: match[1], label: match[2].trim() })
-      }
-    }
-  }
-
-  return { text, choices, isEnding }
-}
-
-const getStoryText = (content) => {
-  return extractStoryMeta(content).text
-}
-
-const getStoryChoices = (content) => {
-  return extractStoryMeta(content).choices
-}
-
-const isStoryEnding = (content) => {
-  return extractStoryMeta(content).isEnding
 }
 
 const selectChoice = (number) => {
