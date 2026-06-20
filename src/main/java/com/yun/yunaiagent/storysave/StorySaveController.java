@@ -1,6 +1,6 @@
 package com.yun.yunaiagent.storysave;
 
-import com.yun.yunaiagent.user.AppUser;
+import com.yun.yunaiagent.common.SecurityUtils;
 import com.yun.yunaiagent.user.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -36,24 +36,20 @@ public class StorySaveController {
         if (storyId == null || storyId.isBlank() || sceneId == null || sceneId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "storyId and sceneId are required");
         }
-        Long userId = currentUserId(authentication);
+        Long userId = SecurityUtils.currentUserId(authentication, userService);
         return saveService.createSave(userId, storyId, sceneId, choiceHistory);
     }
 
     @GetMapping
     public List<StorySave> listSaves(Authentication authentication) {
-        Long userId = currentUserId(authentication);
+        Long userId = SecurityUtils.currentUserId(authentication, userService);
         return saveService.listSaves(userId, "lingqiao");
     }
 
     @DeleteMapping("/{saveId}")
     public void deleteSave(@PathVariable Long saveId, Authentication authentication) {
-        Long userId = currentUserId(authentication);
+        Long userId = SecurityUtils.currentUserId(authentication, userService);
         saveService.deleteSave(userId, saveId);
     }
 
-    private Long currentUserId(Authentication authentication) {
-        AppUser user = userService.findByUsername(authentication.getName());
-        return user.getId();
-    }
 }

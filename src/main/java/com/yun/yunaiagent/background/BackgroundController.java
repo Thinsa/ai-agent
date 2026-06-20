@@ -1,6 +1,6 @@
 package com.yun.yunaiagent.background;
 
-import com.yun.yunaiagent.user.AppUser;
+import com.yun.yunaiagent.common.SecurityUtils;
 import com.yun.yunaiagent.user.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -35,7 +35,7 @@ public class BackgroundController {
 
     @GetMapping
     public Map<String, BackgroundService.BackgroundDto> listBackgrounds(Authentication authentication) {
-        return backgroundService.listBackgrounds(currentUserId(authentication));
+        return backgroundService.listBackgrounds(SecurityUtils.currentUserId(authentication, userService));
     }
 
     @PostMapping("/{agentKey}")
@@ -59,7 +59,7 @@ public class BackgroundController {
 
         try {
             byte[] imageBytes = file.getBytes();
-            return backgroundService.saveBackground(currentUserId(authentication), agentKey.trim(),
+            return backgroundService.saveBackground(SecurityUtils.currentUserId(authentication, userService), agentKey.trim(),
                     imageBytes, contentType, normalizedOpacity);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload image", e);
@@ -73,17 +73,12 @@ public class BackgroundController {
             Authentication authentication) {
         double rawOpacity = request.opacity <= 0 ? DEFAULT_OPACITY : request.opacity;
         double normalizedOpacity = Math.clamp(rawOpacity, MIN_OPACITY, MAX_OPACITY);
-        return backgroundService.updateOpacity(currentUserId(authentication), agentKey.trim(), normalizedOpacity);
+        return backgroundService.updateOpacity(SecurityUtils.currentUserId(authentication, userService), agentKey.trim(), normalizedOpacity);
     }
 
     @DeleteMapping("/{agentKey}")
     public void deleteBackground(@PathVariable String agentKey, Authentication authentication) {
-        backgroundService.deleteBackground(currentUserId(authentication), agentKey);
-    }
-
-    private Long currentUserId(Authentication authentication) {
-        AppUser user = userService.findByUsername(authentication.getName());
-        return user.getId();
+        backgroundService.deleteBackground(SecurityUtils.currentUserId(authentication, userService), agentKey);
     }
 
     public record OpacityRequest(double opacity) {}

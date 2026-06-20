@@ -2,6 +2,7 @@ package com.yun.yunaiagent.controller;
 
 import com.yun.yunaiagent.chat.ChatDtos;
 import com.yun.yunaiagent.chat.ChatHistoryService;
+import com.yun.yunaiagent.common.SecurityUtils;
 import com.yun.yunaiagent.user.AppUser;
 import com.yun.yunaiagent.user.UserService;
 import org.springframework.security.core.Authentication;
@@ -28,7 +29,7 @@ public class ChatHistoryController {
 
     @GetMapping("/sessions")
     public List<ChatDtos.SessionSummary> listSessions(@RequestParam String module, Authentication authentication) {
-        return chatHistoryService.listSessions(module, currentUser(authentication));
+        return chatHistoryService.listSessions(module, SecurityUtils.currentUser(authentication, userService));
     }
 
     @GetMapping("/sessions/{chatId}")
@@ -37,17 +38,11 @@ public class ChatHistoryController {
             @RequestParam(required = false) String module,
             Authentication authentication
     ) {
-        AppUser user = currentUser(authentication);
+        AppUser user = SecurityUtils.currentUser(authentication, userService);
         if (module == null || module.isBlank()) {
             return chatHistoryService.getConversation(chatId, user);
         }
         return chatHistoryService.getConversation(module, chatId, user);
     }
 
-    private AppUser currentUser(Authentication authentication) {
-        if (authentication == null) {
-            return null;
-        }
-        return userService.findByUsername(authentication.getName());
-    }
 }
