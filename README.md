@@ -38,8 +38,6 @@ LinkMind 是一个基于 Spring Boot 3.4、Spring AI 和 Vue 3 的 AI Agent 应�
 ```text
 .
 ├── ai-vue/                         # Vue 3 + Vite 前端
-├── docs/                           # 项目文档
-├── scripts/                        # 辅助脚本
 ├── src/
 │   ├── main/
 │   │   ├── java/com/yun/yunaiagent/
