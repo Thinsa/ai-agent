@@ -3,6 +3,7 @@ package com.yun.yunaiagent.controller;
 import com.yun.yunaiagent.chat.ChatHistoryService;
 import com.yun.yunaiagent.chat.ChatMessage;
 import com.yun.yunaiagent.common.SecurityUtils;
+import com.yun.yunaiagent.constants.Constants;
 import com.yun.yunaiagent.common.ValidationUtils;
 import com.yun.yunaiagent.security.JwtService;
 import com.yun.yunaiagent.service.StreamingChatService;
@@ -58,7 +59,7 @@ public class StoryController {
             - 如果用户中途想换故事，直接响应"开始"即可
             """;
 
-    private static final int STORY_HISTORY_WINDOW = 30;
+    private static final int STORY_HISTORY_WINDOW = Constants.STORY_HISTORY_WINDOW;
 
     private final ChatModel chatModel;
     private final ChatHistoryService chatHistoryService;

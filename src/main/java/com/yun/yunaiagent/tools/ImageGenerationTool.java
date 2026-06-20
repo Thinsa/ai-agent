@@ -2,6 +2,7 @@ package com.yun.yunaiagent.tools;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yun.yunaiagent.constants.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
@@ -31,7 +32,7 @@ import java.util.UUID;
 @EnableConfigurationProperties(ImageGenerationProperties.class)
 public class ImageGenerationTool implements AgentTool {
 
-    private static final int MAX_IMAGES = 3;
+    private static final int MAX_IMAGES = Constants.MAX_IMAGES;
 
     private final ImageGenerationProperties properties;
 
@@ -134,10 +135,10 @@ public class ImageGenerationTool implements AgentTool {
 
     private static RestClient createRestClient() {
         HttpClient httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
+                .connectTimeout(Duration.ofSeconds(Constants.HTTP_CONNECT_TIMEOUT_SEC))
                 .build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(Duration.ofSeconds(120));
+        requestFactory.setReadTimeout(Duration.ofSeconds(Constants.HTTP_READ_TIMEOUT_SEC));
         return RestClient.builder().requestFactory(requestFactory).build();
     }
 

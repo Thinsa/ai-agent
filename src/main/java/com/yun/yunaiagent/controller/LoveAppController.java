@@ -2,6 +2,7 @@ package com.yun.yunaiagent.controller;
 
 import com.yun.yunaiagent.app.LoveApp;
 import com.yun.yunaiagent.common.SecurityUtils;
+import com.yun.yunaiagent.constants.Constants;
 import com.yun.yunaiagent.security.JwtService;
 import com.yun.yunaiagent.user.UserService;
 import org.springframework.http.MediaType;
@@ -73,7 +74,7 @@ public class LoveAppController {
     public SseEmitter doChatWithLoveAppServerSseEmitter(
             String message, String chatId,
             @RequestParam(required = false) String token, Authentication authentication) {
-        SseEmitter sseEmitter = new SseEmitter(180000L);
+        SseEmitter sseEmitter = new SseEmitter(Constants.SSE_EMITTER_TIMEOUT_MS);
         loveApp.doChatByStream(message, chatId,
                         SecurityUtils.currentUser(authentication, token, jwtService, userService))
                 .subscribe(chunk -> sendChunk(sseEmitter, chunk),

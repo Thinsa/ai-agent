@@ -1,5 +1,6 @@
 package com.yun.yunaiagent.rag;
 
+import com.yun.yunaiagent.constants.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
@@ -100,8 +101,8 @@ public class LoveAppRagService implements ApplicationRunner {
             String rewrittenQuery = queryRewriter.rewrite(query);
             SearchRequest request = SearchRequest.builder()
                     .query(rewrittenQuery)
-                    .topK(4)
-                    .similarityThreshold(0.5)
+                    .topK(Constants.RAG_TOP_K)
+                    .similarityThreshold(Constants.RAG_SIMILARITY_THRESHOLD)
                     .build();
             List<Document> matches = vectorStore.similaritySearch(request);
             if (matches == null || matches.isEmpty()) {

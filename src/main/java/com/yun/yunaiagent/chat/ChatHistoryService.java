@@ -1,6 +1,7 @@
 package com.yun.yunaiagent.chat;
 
 import com.yun.yunaiagent.common.ValidationUtils;
+import com.yun.yunaiagent.constants.Constants;
 import com.yun.yunaiagent.user.AppUser;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -102,9 +103,9 @@ public class ChatHistoryService {
 
     private String titleFrom(String content) {
         String normalized = content.replaceAll("\\s+", " ").trim();
-        if (normalized.length() <= 40) {
+        if (normalized.length() <= Constants.CONVERSATION_TITLE_MAX_LENGTH) {
             return normalized;
         }
-        return normalized.substring(0, 40);
+        return normalized.substring(0, Constants.CONVERSATION_TITLE_MAX_LENGTH);
     }
 }

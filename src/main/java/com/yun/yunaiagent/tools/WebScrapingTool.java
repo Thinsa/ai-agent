@@ -1,5 +1,6 @@
 package com.yun.yunaiagent.tools;
 
+import com.yun.yunaiagent.constants.Constants;
 import org.jsoup.Jsoup;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
@@ -31,7 +32,7 @@ public class WebScrapingTool implements AgentTool {
     public String scrapeWebPage(String url) {
         try {
             return Jsoup.connect(url)
-                    .timeout((int) Duration.ofSeconds(20).toMillis())
+                    .timeout((int) (long) Constants.WEB_SCRAPE_TIMEOUT_MS)
                     .get()
                     .body()
                     .text();

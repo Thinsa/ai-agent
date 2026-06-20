@@ -3,6 +3,7 @@ package com.yun.yunaiagent.controller;
 import com.yun.yunaiagent.agent.YuManus;
 import com.yun.yunaiagent.chat.ChatHistoryService;
 import com.yun.yunaiagent.common.SecurityUtils;
+import com.yun.yunaiagent.constants.Constants;
 import com.yun.yunaiagent.security.JwtService;
 import com.yun.yunaiagent.tools.AgentTool;
 import com.yun.yunaiagent.user.UserService;
@@ -63,7 +64,7 @@ public class ManusController {
             @RequestParam(required = false) String token, Authentication authentication) {
         ToolCallbackProvider provider = toolCallbackProvider.getIfAvailable();
         if (provider == null) {
-            SseEmitter emitter = new SseEmitter(30000L);
+            SseEmitter emitter = new SseEmitter(Constants.MCP_ERROR_TIMEOUT_MS);
             sendChunk(emitter, "MCP 调用失败：未配置或未启动 MCP Server。请先启动 yu-image-search-mcp-server。");
             emitter.complete();
             return emitter;

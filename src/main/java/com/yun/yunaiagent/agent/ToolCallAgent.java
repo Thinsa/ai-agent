@@ -2,6 +2,7 @@ package com.yun.yunaiagent.agent;
 
 import com.yun.yunaiagent.agent.model.AgentState;
 import com.yun.yunaiagent.common.ValidationUtils;
+import com.yun.yunaiagent.constants.Constants;
 import com.yun.yunaiagent.chat.ChatHistoryService;
 import com.yun.yunaiagent.tools.AgentTool;
 import com.yun.yunaiagent.tools.TerminateTool;
@@ -17,7 +18,7 @@ public class ToolCallAgent extends ReActAgent {
 
     private static final String MODULE = "super";
 
-    private static final int MEMORY_WINDOW_SIZE = 20;
+    private static final int MEMORY_WINDOW_SIZE = Constants.MEMORY_WINDOW_SIZE;
 
     protected final List<AgentTool> tools;
 

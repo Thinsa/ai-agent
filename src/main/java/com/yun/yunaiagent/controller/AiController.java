@@ -2,6 +2,7 @@ package com.yun.yunaiagent.controller;
 
 import com.yun.yunaiagent.agent.YuManus;
 import com.yun.yunaiagent.app.LoveApp;
+import com.yun.yunaiagent.constants.Constants;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -141,7 +142,7 @@ public class AiController {
                     safeName.matches(".*\\.(txt|md|json|xml|csv|log|java|py|js|html|css|yml|yaml|properties)$"))) {
                 try {
                     String content = Files.readString(target);
-                    preview = content.length() > 2000 ? content.substring(0, 2000) + "\n...(truncated)" : content;
+                    preview = content.length() > Constants.FILE_PREVIEW_MAX_CHARS ? content.substring(0, Constants.FILE_PREVIEW_MAX_CHARS) + "\n...(truncated)" : content;
                 } catch (IOException ignored) {
                 }
             }
@@ -264,7 +265,7 @@ public class AiController {
      */
     @GetMapping(value = "/love_app/chat/sse_emitter", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter doChatWithLoveAppServerSseEmitter(String message, String chatId, @RequestParam(required = false) String token, Authentication authentication) {
-        SseEmitter sseEmitter = new SseEmitter(180000L);
+        SseEmitter sseEmitter = new SseEmitter(Constants.SSE_EMITTER_TIMEOUT_MS);
         loveApp.doChatByStream(message, chatId, currentUser(authentication, token))
                 .subscribe(chunk -> sendChunk(sseEmitter, chunk), sseEmitter::completeWithError, sseEmitter::complete);
         return sseEmitter;
@@ -303,7 +304,7 @@ public class AiController {
     public SseEmitter doChatWithManusMcp(String message, String chatId, @RequestParam(required = false) String token, Authentication authentication) {
         ToolCallbackProvider provider = toolCallbackProvider.getIfAvailable();
         if (provider == null) {
-            SseEmitter emitter = new SseEmitter(30000L);
+            SseEmitter emitter = new SseEmitter(Constants.MCP_ERROR_TIMEOUT_MS);
             sendChunk(emitter, "MCP 调用失败：未配置或未启动 MCP Server。请先启动 yu-image-search-mcp-server。");
             emitter.complete();
             return emitter;

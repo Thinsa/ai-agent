@@ -2,6 +2,7 @@ package com.yun.yunaiagent.tools;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yun.yunaiagent.constants.Constants;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +15,7 @@ import java.util.List;
 @Component
 public class WebSearchTool implements AgentTool {
 
-    private static final int MAX_RESULTS = 5;
+    private static final int MAX_RESULTS = Constants.WEB_SEARCH_MAX_RESULTS;
 
     private final String apiKey;
 

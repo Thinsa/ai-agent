@@ -2,6 +2,7 @@ package com.yun.yunaiagent.agent;
 
 import com.yun.yunaiagent.agent.model.AgentState;
 import com.yun.yunaiagent.common.ValidationUtils;
+import com.yun.yunaiagent.constants.Constants;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -19,7 +20,7 @@ public abstract class BaseAgent {
     /**
      * 最大执行步数，防止智能体陷入无限循环。
      */
-    protected int maxSteps = 20;
+    protected int maxSteps = Constants.MEMORY_WINDOW_SIZE;
 
     /**
      * 简单对话历史容器，后续可替换为更完整的 memory/session 机制。
@@ -55,7 +56,7 @@ public abstract class BaseAgent {
      * 以 SSE 方式异步执行任务，边执行边把每一步结果推送给客户端。
      */
     public SseEmitter runStream(String userPrompt) {
-        SseEmitter emitter = createEmitter(300000L);
+        SseEmitter emitter = createEmitter(Constants.AGENT_SSE_TIMEOUT_MS);
         CompletableFuture<Void> task = CompletableFuture.runAsync(() -> {
             StringBuilder result = new StringBuilder();
             boolean persisted = false;

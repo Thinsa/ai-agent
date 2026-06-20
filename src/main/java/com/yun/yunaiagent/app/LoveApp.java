@@ -1,6 +1,7 @@
 package com.yun.yunaiagent.app;
 
 import com.yun.yunaiagent.chat.ChatHistoryService;
+import com.yun.yunaiagent.constants.Constants;
 import com.yun.yunaiagent.rag.LoveAppRagService;
 import com.yun.yunaiagent.service.StreamingChatService;
 import com.yun.yunaiagent.user.AppUser;
@@ -25,7 +26,7 @@ public class LoveApp {
 
     private static final String MODULE = "love";
 
-    private static final int MEMORY_WINDOW_SIZE = 20;
+    private static final int MEMORY_WINDOW_SIZE = Constants.MEMORY_WINDOW_SIZE;
 
     private static final String DEFAULT_CHAT_ID = "default";
 
