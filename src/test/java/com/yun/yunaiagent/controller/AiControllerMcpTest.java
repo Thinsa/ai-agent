@@ -1,11 +1,9 @@
 package com.yun.yunaiagent.controller;
 
 import com.yun.yunaiagent.agent.YuManus;
-import com.yun.yunaiagent.app.LoveApp;
 import com.yun.yunaiagent.chat.ChatHistoryService;
 import com.yun.yunaiagent.security.JwtService;
 import com.yun.yunaiagent.tools.AgentTool;
-import com.yun.yunaiagent.tools.OssObjectStorageService;
 import com.yun.yunaiagent.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ChatModel;
@@ -18,19 +16,17 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-class AiControllerMcpTest {
+class ManusControllerTest {
 
     @Test
     void manusMcpReturnsClearErrorWhenToolProviderIsMissing() {
-        AiController controller = new AiController(
-                mock(LoveApp.class),
+        ManusController controller = new ManusController(
                 List.of(),
                 mock(ChatModel.class),
                 emptyProvider(),
-                mock(UserService.class),
-                mock(JwtService.class),
                 mock(ChatHistoryService.class),
-                mock(OssObjectStorageService.class)
+                mock(UserService.class),
+                mock(JwtService.class)
         );
 
         SseEmitter emitter = controller.doChatWithManusMcp("search cat image", "mcp-test", null, null);
@@ -42,15 +38,13 @@ class AiControllerMcpTest {
     void manusChatUsesAvailableToolProviderForLocalTools() {
         ToolCallbackProvider provider = mock(ToolCallbackProvider.class);
         TrackingProvider trackingProvider = new TrackingProvider(provider);
-        AiController controller = new AiController(
-                mock(LoveApp.class),
+        ManusController controller = new ManusController(
                 List.of(),
                 mock(ChatModel.class),
                 trackingProvider,
-                mock(UserService.class),
-                mock(JwtService.class),
                 mock(ChatHistoryService.class),
-                mock(OssObjectStorageService.class)
+                mock(UserService.class),
+                mock(JwtService.class)
         );
 
         SseEmitter emitter = controller.doChatWithManus("hello", "chat-test", null, null);

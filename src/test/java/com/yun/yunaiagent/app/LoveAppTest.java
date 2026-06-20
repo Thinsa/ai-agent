@@ -5,6 +5,7 @@ import com.yun.yunaiagent.rag.EmptyKnowledgeDocumentRepository;
 import com.yun.yunaiagent.rag.LoveAppDocumentLoader;
 import com.yun.yunaiagent.rag.LoveAppRagService;
 import com.yun.yunaiagent.rag.QueryRewriter;
+import com.yun.yunaiagent.service.StreamingChatService;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -16,12 +17,15 @@ import org.springframework.beans.factory.ObjectProvider;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class LoveAppTest {
 
@@ -36,7 +40,14 @@ class LoveAppTest {
 
     @Test
     void doChatByStreamReturnsModelChunks() {
-        LoveApp loveApp = new LoveApp(new FakeChatModel(), fakeRagService(), emptyProvider());
+        StreamingChatService streamingChatService = mock(StreamingChatService.class);
+        when(streamingChatService.streamAndPersist(any(), any(), any(), any(), any(), any()))
+                .thenAnswer(invocation -> {
+                    Supplier<Flux<String>> supplier = invocation.getArgument(5);
+                    return supplier.get();
+                });
+        LoveApp loveApp = new LoveApp(new FakeChatModel(), fakeRagService(), emptyProvider(),
+                null, streamingChatService);
 
         List<String> chunks = loveApp.doChatByStream("hello", "chat-1").collectList().block();
 
@@ -46,7 +57,7 @@ class LoveAppTest {
     @Test
     void doChatWithRagRecordsConversationHistory() {
         ChatHistoryService chatHistoryService = mock(ChatHistoryService.class);
-        LoveApp loveApp = new LoveApp(new FakeChatModel(), fakeRagService(), emptyProvider(), chatHistoryService);
+        LoveApp loveApp = new LoveApp(new FakeChatModel(), fakeRagService(), emptyProvider(), chatHistoryService, null);
 
         String response = loveApp.doChatWithRag("How to date well?", "love-rag-1", null);
 
