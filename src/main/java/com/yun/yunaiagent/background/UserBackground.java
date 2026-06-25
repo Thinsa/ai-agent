@@ -15,6 +15,11 @@ import java.time.LocalDateTime;
 @Table(name = "user_background", uniqueConstraints = {
         @UniqueConstraint(name = "uk_user_background_user_agent", columnNames = {"user_id", "agent_key"})
 })
+/**
+ * 用户背景配置实体。
+ *
+ * <p>记录用户选择的背景图片、样式或其他个性化展示参数。</p>
+ */
 public class UserBackground {
 
     @Id

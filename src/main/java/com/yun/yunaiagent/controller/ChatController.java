@@ -33,6 +33,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/ai")
+/**
+ * 普通 AI 聊天与文件上传入口。
+ *
+ * <p>负责 SSE 流式聊天、图片多模态输入、文本文件预览和上传鉴权，是前端聊天页面的主要后端接口。</p>
+ */
 public class ChatController {
 
     private final ChatModel chatModel;
@@ -66,11 +71,13 @@ public class ChatController {
         String userMessage = buildChatUserMessage(message, fileName, imageUrl);
         String effectiveImageUrl = (imageUrl != null && !imageUrl.isBlank()) ? imageUrl.trim() : null;
 
+        // 将模型流式输出与聊天记录持久化绑定，确保前端边接收 token 边保留历史记录。
         return streamingChatService.streamAndPersist("chat", chatId, userMessage, user, chatHistoryService, () -> {
             ChatClient.ChatClientRequestSpec prompt = ChatClient.builder(chatModel).build().prompt()
                     .system("你是灵语 Spark，LinkMind 灵桥的日常对话伙伴。请用友好、自然的中文回答用户的问题，保持回答简洁有温度。"
                             + (effectiveImageUrl != null ? " 用户上传了图片，请仔细观察图片内容并结合图片回答用户问题。" : ""));
 
+            // 图片 URL 会以 Media 形式传给视觉模型，文本提示仍保留在同一次 user message 中。
             if (effectiveImageUrl != null) {
                 prompt = prompt.user(userSpec -> userSpec
                         .text(userMessage)
@@ -110,6 +117,7 @@ public class ChatController {
             String contentType = file.getContentType();
             boolean isImage = contentType != null && contentType.startsWith("image/");
 
+            // 图片需要可公网访问，先上传到 OSS，再把 URL 交给多模态模型读取。
             if (isImage) {
                 // Image upload to OSS for public URL
                 String objectKey = "uploads/images/" + System.currentTimeMillis() + "_" + safeName;

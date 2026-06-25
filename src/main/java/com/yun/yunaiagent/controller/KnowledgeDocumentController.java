@@ -26,6 +26,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/knowledge-documents")
+/**
+ * 知识库文档管理接口。
+ *
+ * <p>提供文档增删改查、分类查询和重建索引能力，供前端维护 RAG 检索语料。</p>
+ */
 public class KnowledgeDocumentController {
 
     private final KnowledgeDocumentService documentService;

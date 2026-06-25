@@ -8,6 +8,11 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 
 import java.util.List;
 
+/**
+ * 项目内置的 Manus 风格智能体。
+ *
+ * <p>在 ToolCallAgent 基础上设置更长的最大执行步数，用于多工具协同任务。</p>
+ */
 public class YuManus extends ToolCallAgent {
 
     // Single primary constructor:

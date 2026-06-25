@@ -31,6 +31,11 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/ai")
+/**
+ * 互动故事接口。
+ *
+ * <p>负责固定故事脚本、章节推进和 AI 引导内容的流式输出。</p>
+ */
 public class StoryController {
 
     private static final String STORY_SYSTEM_PROMPT = """

@@ -13,6 +13,11 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
+/**
+ * 聊天历史服务。
+ *
+ * <p>统一负责会话创建、消息追加、历史查询和最近记忆窗口读取，供普通聊天与 Agent 复用。</p>
+ */
 public class ChatHistoryService {
 
     public static final String ROLE_USER = "user";
@@ -26,6 +31,31 @@ public class ChatHistoryService {
     public ChatHistoryService(ChatConversationRepository conversationRepository, ChatMessageRepository messageRepository) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
+    }
+
+    /**
+     * 创建新会话占位记录，title 为"新会话"，第一条用户消息发出后会自动更新为有意义标题。
+     */
+    @Transactional
+    public ChatConversation createSession(String module, String chatId, AppUser user) {
+        String normalizedModule = ValidationUtils.required(module, "module");
+        String normalizedChatId = ValidationUtils.required(chatId, "chatId");
+        return conversationRepository.findByModuleAndChatIdAndUser(normalizedModule, normalizedChatId, user)
+                .orElseGet(() -> conversationRepository.save(
+                        ChatConversation.create(normalizedModule, normalizedChatId, user, "新会话")));
+    }
+
+    /**
+     * 删除会话及其所有消息，不可恢复。
+     */
+    @Transactional
+    public void deleteConversation(String module, String chatId, AppUser user) {
+        findConversation(ValidationUtils.required(module, "module"),
+                ValidationUtils.required(chatId, "chatId"), user)
+                .ifPresent(conversation -> {
+                    messageRepository.deleteByConversation(conversation);
+                    conversationRepository.delete(conversation);
+                });
     }
 
     @Transactional
@@ -87,6 +117,10 @@ public class ChatHistoryService {
         String normalizedContent = ValidationUtils.required(content, "content");
         ChatConversation conversation = findConversation(normalizedModule, normalizedChatId, user)
                 .orElseGet(() -> conversationRepository.save(ChatConversation.create(normalizedModule, normalizedChatId, user, titleFrom(normalizedContent))));
+        // 第一条用户消息发出后，将会话占位标题替换为有意义的前 40 字
+        if (ROLE_USER.equals(role) && "新会话".equals(conversation.getTitle())) {
+            conversation.setTitle(titleFrom(normalizedContent));
+        }
         conversation.touch();
         ChatMessage message = ChatMessage.create(conversation, user, role, normalizedContent);
         return messageRepository.save(message);

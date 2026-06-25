@@ -9,6 +9,11 @@ package com.yun.yunaiagent.rag;
  * @param source   来源类型（"classpath" | "custom"）
  * @param category 文档分类（"恋爱" | "婚姻" | "单身" | "自定义" 等）
  */
+/**
+ * 可加载知识文档的数据载体。
+ *
+ * <p>在内置 Markdown 文档、数据库实体和向量索引之间传递标准化的文档元信息。</p>
+ */
 record LoadableDocument(String docId, String title, String content, String source, String category) {
 
     LoadableDocument {

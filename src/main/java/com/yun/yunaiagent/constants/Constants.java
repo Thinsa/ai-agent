@@ -1,5 +1,10 @@
 package com.yun.yunaiagent.constants;
 
+/**
+ * 全局常量集中定义。
+ *
+ * <p>用于统一维护对话记忆窗口、SSE 超时时间等跨模块共享配置，避免魔法值散落在业务代码中。</p>
+ */
 public final class Constants {
     private Constants() {}
 

@@ -14,6 +14,7 @@
       v-for="session in sessions"
       v-else
       :key="session.chatId"
+      :ref="el => setItemRef(session.chatId, el)"
       class="history-item"
       :class="{ active: session.chatId === activeChatId }"
       type="button"
@@ -21,12 +22,24 @@
     >
       <span class="item-title">{{ session.title || session.chatId }}</span>
       <span class="item-time">{{ formatTime(session.updatedAt) }}</span>
+      <button
+        class="delete-btn"
+        type="button"
+        :title="`删除会话「${session.title || session.chatId}」`"
+        @click.stop="$emit('delete-session', session)"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-.867 12.142A2 2 0 0 1 16.138 20H7.862a2 2 0 0 1-1.995-1.858L5 6" />
+        </svg>
+      </button>
     </button>
   </aside>
 </template>
 
 <script setup>
-defineProps({
+import { watch, nextTick } from 'vue'
+
+const props = defineProps({
   sessions: {
     type: Array,
     default: () => []
@@ -45,7 +58,23 @@ defineProps({
   }
 })
 
-defineEmits(['select-session', 'new-session'])
+defineEmits(['select-session', 'new-session', 'delete-session'])
+
+const itemRefs = {}
+
+const setItemRef = (chatId, el) => {
+  if (el) {
+    itemRefs[chatId] = el
+  }
+}
+
+watch(() => props.activeChatId, async () => {
+  await nextTick()
+  const el = itemRefs[props.activeChatId]
+  if (el) {
+    el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }
+})
 
 const formatTime = (value) => {
   if (!value) return ''
@@ -94,7 +123,7 @@ const formatTime = (value) => {
 .history-state { padding: 18px 14px; color: var(--color-text-2); font-size: 14px; }
 
 .history-item {
-  display: flex; flex-direction: column; gap: 5px;
+  position: relative; display: flex; flex-direction: column; gap: 5px;
   width: 100%; padding: 12px 14px; border: 0;
   border-bottom: var(--border-subtle);
   background: transparent; text-align: left; cursor: pointer;
@@ -108,6 +137,19 @@ const formatTime = (value) => {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .item-time { color: var(--color-text-2); font-size: 12px; }
+
+.delete-btn {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  border: 0; background: transparent; color: var(--color-text-2);
+  cursor: pointer; padding: 4px; border-radius: var(--radius-sm);
+  opacity: 0; transition: opacity var(--duration-fast), color var(--duration-fast);
+}
+.delete-btn svg {
+  width: 16px; height: 16px; fill: none; stroke: currentColor;
+  stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8;
+}
+.history-item:hover .delete-btn { opacity: 1; }
+.delete-btn:hover { color: #e74c3c; }
 
 @media (max-width: 900px) {
   .history-sidebar { width: 100%; min-width: 0; height: auto; min-height: 0; max-height: 220px; }

@@ -18,6 +18,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/story-saves")
+/**
+ * 剧情存档接口。
+ *
+ * <p>提供当前登录用户的剧情存档创建、查询和删除能力。</p>
+ */
 public class StorySaveController {
 
     private final StorySaveService saveService;

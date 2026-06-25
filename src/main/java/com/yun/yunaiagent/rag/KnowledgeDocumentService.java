@@ -9,6 +9,11 @@ import java.util.List;
  * 自定义知识库文档的 CRUD 与重索引服务。
  */
 @Service
+/**
+ * 知识库文档业务服务。
+ *
+ * <p>负责文档 CRUD、分类统计和索引重建编排，连接管理接口与向量检索服务。</p>
+ */
 public class KnowledgeDocumentService {
 
     private final KnowledgeDocumentRepository repository;
@@ -89,6 +94,9 @@ public class KnowledgeDocumentService {
         );
     }
 
+    /**
+     * 知识库文档展示数据。
+     */
     public record KnowledgeDocumentDto(
             Long id,
             String title,
@@ -100,11 +108,23 @@ public class KnowledgeDocumentService {
             java.time.LocalDateTime updatedAt
     ) {}
 
+    /**
+     * 创建知识库文档请求。
+     */
     public record CreateDocumentRequest(String title, String content, String category) {}
 
+    /**
+     * 更新知识库文档请求。
+     */
     public record UpdateDocumentRequest(String title, String content, String category, boolean enabled) {}
 
+    /**
+     * 知识库文档数量统计。
+     */
     public record DocumentCountDto(long totalCount, long enabledCount) {}
 
+    /**
+     * 重建索引结果。
+     */
     public record ReindexResultDto(long indexedCount) {}
 }

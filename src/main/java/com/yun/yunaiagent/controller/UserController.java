@@ -18,6 +18,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/user")
+/**
+ * 用户账号接口。
+ *
+ * <p>提供注册、登录、当前用户、token 校验、资料更新和头像上传能力。</p>
+ */
 public class UserController {
 
     private final UserService userService;
@@ -56,6 +61,7 @@ public class UserController {
 
     @GetMapping("/token/validate")
     public UserDtos.TokenValidationResponse validateToken(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        // token 校验接口只解析 Authorization 头，不依赖当前 SecurityContext，便于前端启动时主动探活。
         String token = resolveBearerToken(authorization);
         return jwtService.validateToken(token)
                 .map(validation -> UserDtos.TokenValidationResponse.valid(

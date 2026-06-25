@@ -9,6 +9,11 @@ import reactor.core.publisher.Flux;
 import java.util.function.Supplier;
 
 @Service
+/**
+ * 流式聊天持久化服务。
+ *
+ * <p>统一处理 SSE 输出过程中的用户消息写入和助手回复落库。</p>
+ */
 public class StreamingChatService {
 
     /**
@@ -36,8 +41,8 @@ public class StreamingChatService {
         StringBuilder answer = new StringBuilder();
         return streamSupplier.get()
                 .doOnNext(answer::append)
-                .doOnComplete(() -> {
-                    if (historyService != null) {
+                .doFinally(signal -> {
+                    if (historyService != null && !answer.toString().isBlank()) {
                         historyService.appendAssistantMessage(module, effectiveChatId,
                                 answer.toString(), user);
                     }

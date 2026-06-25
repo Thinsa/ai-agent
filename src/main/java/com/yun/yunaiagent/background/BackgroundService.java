@@ -10,6 +10,11 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
+/**
+ * 用户背景业务服务。
+ *
+ * <p>封装背景配置的读取、保存和默认值兜底逻辑。</p>
+ */
 public class BackgroundService {
 
     private static final String BG_DIR = "backgrounds";
@@ -62,6 +67,9 @@ public class BackgroundService {
         return new BackgroundDto(bg.getAgentKey(), bg.getImageData(), bg.getOpacity());
     }
 
+    /**
+     * 用户背景展示数据。
+     */
     public record BackgroundDto(String agentKey, String imageData, double opacity) {
     }
 }

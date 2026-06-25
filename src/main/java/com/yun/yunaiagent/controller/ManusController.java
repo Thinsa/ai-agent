@@ -24,6 +24,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/ai/manus")
+/**
+ * YuManus 智能体接口。
+ *
+ * <p>每次请求创建一个短生命周期 Agent，通过 SSE 返回 ReAct 推理、工具调用和最终回答。</p>
+ */
 public class ManusController {
 
     private final List<AgentTool> allTools;
@@ -55,6 +60,7 @@ public class ManusController {
             @RequestParam(required = false) String imageUrl,
             @RequestParam(required = false) String fileName,
             @RequestParam(required = false) String token, Authentication authentication) {
+        // Agent 持有当前用户和会话 ID，便于工具调用结果与对话历史按用户隔离。
         YuManus yuManus = new YuManus(allTools, chatModel,
                 toolCallbackProvider.getIfAvailable(), chatHistoryService, chatId,
                 SecurityUtils.currentUser(authentication, token, jwtService, userService));
@@ -66,6 +72,7 @@ public class ManusController {
     @GetMapping(value = "/chat/mcp", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter doChatWithManusMcp(String message, String chatId,
             @RequestParam(required = false) String token, Authentication authentication) {
+        // MCP 工具通过 ToolCallbackProvider 动态注入，未启动 MCP Server 时给出可读错误。
         ToolCallbackProvider provider = toolCallbackProvider.getIfAvailable();
         if (provider == null) {
             SseEmitter emitter = new SseEmitter(Constants.MCP_ERROR_TIMEOUT_MS);

@@ -21,6 +21,11 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_chat_message_conversation", columnList = "conversation_id,created_at")
         }
 )
+/**
+ * 聊天消息实体。
+ *
+ * <p>保存用户消息和助手消息的角色、内容、顺序与会话归属，是历史记录回放和记忆窗口的基础。</p>
+ */
 public class ChatMessage {
 
     @Id

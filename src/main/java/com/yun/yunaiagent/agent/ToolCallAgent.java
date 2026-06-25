@@ -19,6 +19,11 @@ import java.net.URI;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 支持工具调用的 ReAct Agent。
+ *
+ * <p>把 Spring AI ChatClient、ToolCallbackProvider、聊天历史和上传文件上下文组合成完整的工具调用循环。</p>
+ */
 public class ToolCallAgent extends ReActAgent {
 
     private static final String MODULE = "super";
@@ -103,6 +108,7 @@ public class ToolCallAgent extends ReActAgent {
 
     @Override
     protected String step(String userPrompt, int stepNumber) {
+        // 图片作为 Media 只需要首轮发送，首轮结束后立即终止，避免重复识别同一张图。
         String stepResult = super.step(userPrompt, stepNumber);
         if (imageUrl != null && stepNumber == 1) {
             state = AgentState.FINISHED;
@@ -119,6 +125,7 @@ public class ToolCallAgent extends ReActAgent {
     protected String act(String userPrompt, int stepNumber) {
         if (chatClient != null && toolCallbackProvider != null) {
             String messageText = buildUserMessage(userPrompt);
+            // Spring AI 会根据 ToolCallbackProvider 暴露的工具描述决定是否发起工具调用。
             ChatResponse chatResponse;
             // 首步且存在图片 URL 时，将图片作为 Media 传给视觉模型
             if (imageUrl != null && stepNumber == 1) {

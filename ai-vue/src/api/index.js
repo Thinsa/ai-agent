@@ -171,6 +171,10 @@ export const chatWithManusMcp = (message, chatId, onMessage, onError) => {
   return connectSSE('/ai/manus/chat/mcp', { message, chatId }, onMessage, onError)
 }
 
+export const createChatSession = (module, chatId) => {
+  return request.post('/ai/history/sessions', { module, chatId }).then(res => res.data)
+}
+
 export const listChatSessions = (module) => {
   return request.get('/ai/history/sessions', { params: { module } }).then(res => res.data)
 }
@@ -178,6 +182,12 @@ export const listChatSessions = (module) => {
 export const getChatHistory = (chatId, module) => {
   return request.get(`/ai/history/sessions/${encodeURIComponent(chatId)}`, {
     params: module ? { module } : {}
+  }).then(res => res.data)
+}
+
+export const deleteChatSession = (chatId, module) => {
+  return request.delete(`/ai/history/sessions/${encodeURIComponent(chatId)}`, {
+    params: { module }
   }).then(res => res.data)
 }
 
@@ -199,8 +209,10 @@ export default {
   chatWithManus,
   chatWithManusMcp,
   chatStory,
+  createChatSession,
   listChatSessions,
   getChatHistory,
+  deleteChatSession,
   createStorySave,
   listStorySaves,
   deleteStorySave,

@@ -24,6 +24,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
+/**
+ * 恋爱大师核心应用服务。
+ *
+ * <p>封装 Prompt、模型调用、RAG 辅助和聊天记忆，形成面向情感咨询场景的应用层能力。</p>
+ */
 public class LoveApp {
 
     private static final String MODULE = "love";
@@ -33,7 +38,7 @@ public class LoveApp {
     private static final String DEFAULT_CHAT_ID = "default";
 
     private static final String SYSTEM_PROMPT = """
-            你是“AI 恋爱大师”，请用温和、清晰、负责的中文回答用户的情感问题。
+            你是”小知”，请用温和、清晰、负责的中文回答用户的情感问题。
             先共情，再给具体建议，避免操控、PUA 或伤害性建议。
             """;
 
@@ -104,8 +109,8 @@ public class LoveApp {
                         .stream()
                         .chatResponse())
                 .doOnNext(answer::append)
-                .doOnComplete(() -> {
-                    if (chatHistoryService != null) {
+                .doFinally(signal -> {
+                    if (chatHistoryService != null && !answer.toString().isBlank()) {
                         chatHistoryService.appendAssistantMessage(MODULE,
                                 normalizeChatId(chatId), answer.toString(), user);
                     }
@@ -228,6 +233,9 @@ public class LoveApp {
         return chatId.trim();
     }
 
+    /**
+     * 恋爱建议报告结构化结果。
+     */
     public record LoveReport(String title, String summary, List<String> suggestions) {
     }
 }

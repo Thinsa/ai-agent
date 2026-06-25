@@ -10,6 +10,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Agent 执行框架基类。
+ *
+ * <p>统一管理状态机、执行步数、SSE 输出和运行前后钩子，子类只需要实现单步执行逻辑。</p>
+ */
 public abstract class BaseAgent {
 
     /**

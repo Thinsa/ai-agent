@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "story_save")
+/**
+ * 用户剧情存档实体。
+ */
 public class StorySave {
 
     @Id

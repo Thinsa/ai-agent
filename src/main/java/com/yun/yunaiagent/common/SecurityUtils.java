@@ -5,6 +5,11 @@ import com.yun.yunaiagent.user.AppUser;
 import com.yun.yunaiagent.user.UserService;
 import org.springframework.security.core.Authentication;
 
+/**
+ * 安全上下文工具。
+ *
+ * <p>封装从 Spring Security 或 URL token 中解析当前用户的逻辑，供 SSE 等特殊鉴权场景复用。</p>
+ */
 public final class SecurityUtils {
     private SecurityUtils() {}
 

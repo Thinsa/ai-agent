@@ -30,6 +30,11 @@ import java.util.UUID;
 
 @Component
 @EnableConfigurationProperties(ImageGenerationProperties.class)
+/**
+ * 图片生成工具。
+ *
+ * <p>封装 DashScope 图片生成、临时图片下载和 OSS 上传流程，最终返回可访问的图片 URL。</p>
+ */
 public class ImageGenerationTool implements AgentTool {
 
     private static final int MAX_IMAGES = Constants.MAX_IMAGES;
@@ -143,23 +148,38 @@ public class ImageGenerationTool implements AgentTool {
     }
 
     @FunctionalInterface
+    /**
+     * DashScope 图片生成客户端抽象。
+     */
     interface DashScopeImageClient {
         List<String> generate(String prompt, int n) throws Exception;
     }
 
     @FunctionalInterface
+    /**
+     * 临时图片下载器抽象。
+     */
     interface ImageDownloader {
         DownloadedImage download(String url);
     }
 
     @FunctionalInterface
+    /**
+     * 对象存储上传器抽象。
+     */
     interface ObjectUploader {
         String upload(String key, byte[] bytes, String contentType);
     }
 
+    /**
+     * 下载后的图片二进制内容和 MIME 类型。
+     */
     public record DownloadedImage(byte[] bytes, String contentType) {
     }
 
+    /**
+     * 基于 RestClient 的 DashScope 图片生成客户端实现。
+     */
     private static class RestClientDashScopeImageClient implements DashScopeImageClient {
 
         private static final Logger log = LoggerFactory.getLogger(ImageGenerationTool.class);
@@ -277,6 +297,9 @@ public class ImageGenerationTool implements AgentTool {
         }
     }
 
+    /**
+     * 基于 URL 拉取模型生成图片内容的下载器。
+     */
     private static class UrlImageDownloader implements ImageDownloader {
 
         private final RestClient restClient;

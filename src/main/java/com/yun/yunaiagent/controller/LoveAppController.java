@@ -19,6 +19,11 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/ai/love_app")
+/**
+ * 恋爱大师应用接口。
+ *
+ * <p>封装面向情感咨询场景的 AI 对话能力，并通过 SSE 将模型回答实时推给前端。</p>
+ */
 public class LoveAppController {
 
     private final LoveApp loveApp;

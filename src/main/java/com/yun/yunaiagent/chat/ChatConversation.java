@@ -24,6 +24,11 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_chat_conversation_module_chat_id", columnList = "module,chat_id")
         }
 )
+/**
+ * 聊天会话实体。
+ *
+ * <p>表示某个用户在指定模块下的一段对话容器，用于聚合多条聊天消息。</p>
+ */
 public class ChatConversation {
 
     @Id
@@ -65,6 +70,10 @@ public class ChatConversation {
         if (this.user == null && user != null) {
             this.user = user;
         }
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public void touch() {

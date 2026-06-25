@@ -1,5 +1,10 @@
 package com.yun.yunaiagent.agent;
 
+/**
+ * ReAct 模式 Agent 基类。
+ *
+ * <p>将单步执行拆分为 think 与 act 两个阶段，便于把模型推理和工具行动分开扩展。</p>
+ */
 public abstract class ReActAgent extends BaseAgent {
 
     /**

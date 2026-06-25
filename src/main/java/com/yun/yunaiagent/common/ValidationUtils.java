@@ -6,6 +6,11 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * 跨服务复用的参数校验与字符串工具方法。
  */
+/**
+ * 输入校验与规范化工具。
+ *
+ * <p>统一处理空字符串、默认值和用户输入清洗，减少控制器和服务层的重复判断。</p>
+ */
 public final class ValidationUtils {
 
     private ValidationUtils() {

@@ -19,6 +19,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+/**
+ * Spring Security 安全配置。
+ *
+ * <p>定义接口放行规则、JWT 过滤器接入位置，以及无状态登录场景下的鉴权策略。</p>
+ */
 @Configuration
 public class SecurityConfig {
 
@@ -52,7 +57,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/user/register", "/user/login", "/user/token/validate", "/health", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
-                                "/ai/**").permitAll()
+                                "/ai/**", "/error").permitAll()
                         .requestMatchers("/user/current", "/user/profile", "/user/logout",
                                 "/backgrounds/**", "/story-saves/**",
                                 "/knowledge-documents/**").authenticated()

@@ -6,6 +6,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+/**
+ * 剧情存档业务服务。
+ */
 public class StorySaveService {
 
     private final StorySaveRepository repository;

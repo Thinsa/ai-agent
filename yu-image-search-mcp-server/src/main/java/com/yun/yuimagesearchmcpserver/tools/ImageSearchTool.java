@@ -12,6 +12,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+/**
+ * MCP 图片搜索工具。
+ *
+ * <p>封装 Pexels 搜索 API，并通过 Spring AI 的 @Tool 注解暴露给主应用或其他 MCP Client 调用。</p>
+ */
 public class ImageSearchTool {
 
     private final String apiKey;
@@ -39,6 +44,7 @@ public class ImageSearchTool {
 
     @Tool(description = "Search images from Pexels and return medium image URLs.")
     public String searchImage(@ToolParam(description = "Search query keyword") String query) {
+        // MCP 工具需要优先返回可读错误，避免主应用把配置缺失误判为搜索无结果。
         if (apiKey.isBlank()) {
             return "Image search is unavailable: PEXELS_API_KEY is not configured.";
         }
@@ -58,6 +64,7 @@ public class ImageSearchTool {
 
     @SuppressWarnings("unchecked")
     List<String> searchMediumImages(String query) {
+        // 只提取 medium 图片地址，控制 MCP 响应体积并降低模型上下文占用。
         Map<String, Object> response = restClient.get()
                 .uri(apiUrl + "?query={query}", query)
                 .header("Authorization", apiKey)

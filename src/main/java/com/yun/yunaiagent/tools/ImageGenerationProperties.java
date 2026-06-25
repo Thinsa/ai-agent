@@ -3,6 +3,11 @@ package com.yun.yunaiagent.tools;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "dashscope.image")
+/**
+ * 图片生成配置属性。
+ *
+ * <p>绑定 DashScope 图片模型、接口地址、默认尺寸和水印等参数，供图片生成工具统一读取。</p>
+ */
 public record ImageGenerationProperties(
         String model,
         String size,

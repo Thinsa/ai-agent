@@ -43,6 +43,7 @@
         module="super"
         @select-session="loadHistory"
         @new-session="startNewSession"
+        @delete-session="handleDeleteSession"
       />
 
       <div class="chat-area">
@@ -68,7 +69,7 @@ import AgentSettingsPanel from '../components/AgentSettingsPanel.vue'
 import ChatHistorySidebar from '../components/ChatHistorySidebar.vue'
 import ChatRoom from '../components/ChatRoom.vue'
 import { useSseChat } from '../composables/useSseChat'
-import { chatWithManus, chatWithManusMcp, getChatHistory, listChatSessions } from '../api'
+import { chatWithManus, chatWithManusMcp, deleteChatSession, getChatHistory, listChatSessions } from '../api'
 
 useHead({
   title: '极智 Core - LinkMind 灵桥',
@@ -172,15 +173,40 @@ const loadHistory = async targetChatId => {
   const detail = await getChatHistory(targetChatId, 'super')
   chatId.value = detail.chatId
   messages.value = detail.messages.map(toPageMessage)
+  await loadSessions()
 }
 
-const startNewSession = () => {
+const handleDeleteSession = async (session) => {
+  const title = session.title || session.chatId
+  if (!confirm(`确定删除会话「${title}」？删除后不可恢复。`)) return
+  try {
+    await deleteChatSession(session.chatId, 'super')
+    historySessions.value = historySessions.value.filter(s => s.chatId !== session.chatId)
+    if (session.chatId === chatId.value) {
+      startNewSession()
+    }
+  } catch (e) {
+    console.error('Delete session failed:', e)
+  }
+}
+
+const startNewSession = async () => {
   closeStream()
   connectionStatus.value = 'disconnected'
   streamPaused.value = false
   chatId.value = generateChatId()
   messages.value = []
   addMessage('你好，我是极智 Core，LinkMind 灵桥的全能助手。我可以调用工具、联网搜索、生成图片，解决各类复杂问题。', false)
+  await loadSessions()
+  if (!historySessions.value.some(s => s.chatId === chatId.value)) {
+    historySessions.value.unshift({
+      module: 'super',
+      chatId: chatId.value,
+      title: '新会话',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    })
+  }
 }
 
 const buildPrompt = message => {

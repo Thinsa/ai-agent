@@ -6,6 +6,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/health")
+/**
+ * 健康检查接口。
+ *
+ * <p>用于前端、部署平台或反向代理快速确认后端服务是否可用。</p>
+ */
 public class HealthController {
 
     /**

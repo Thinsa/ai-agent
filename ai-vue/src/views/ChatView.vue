@@ -15,6 +15,7 @@
         module="chat"
         @select-session="loadHistory"
         @new-session="startNewSession"
+        @delete-session="handleDeleteSession"
       />
 
       <StoryGuidePanel
@@ -70,7 +71,7 @@ import PageHeader from '../components/PageHeader.vue'
 import { useSseChat } from '../composables/useSseChat'
 import { useFixedStory } from '../composables/useFixedStory'
 import { useStoryGuide } from '../composables/useStoryGuide'
-import { createStorySave, listStorySaves, getChatHistory, listChatSessions } from '../api'
+import { createStorySave, listStorySaves, deleteChatSession, getChatHistory, listChatSessions } from '../api'
 import { getStoredToken } from '../api'
 import { startStory, chooseOption, getSaveData, loadFromSave, resetStory, isAtEnding } from '../stores/fixedStoryStore'
 import { getGuideStatus } from '../stores/storyGuide'
@@ -225,9 +226,24 @@ const loadHistory = async targetChatId => {
   const detail = await getChatHistory(targetChatId, 'chat')
   chatId.value = detail.chatId
   messages.value = detail.messages.map(toPageMessage)
+  await loadSessions()
 }
 
-const startNewSession = () => {
+const handleDeleteSession = async (session) => {
+  const title = session.title || session.chatId
+  if (!confirm(`确定删除会话「${title}」？删除后不可恢复。`)) return
+  try {
+    await deleteChatSession(session.chatId, 'chat')
+    historySessions.value = historySessions.value.filter(s => s.chatId !== session.chatId)
+    if (session.chatId === chatId.value) {
+      startNewSession()
+    }
+  } catch (e) {
+    console.error('Delete session failed:', e)
+  }
+}
+
+const startNewSession = async () => {
   closeStream()
   connectionStatus.value = 'disconnected'
   streamPaused.value = false
@@ -239,6 +255,16 @@ const startNewSession = () => {
     addMessage('这是一个关于灵桥、命运与选择的奇幻故事，拥有 4 种不同结局。\n\n输入「开始」进入故事，输入「存档」保存进度，输入「读档」读取存档。', false)
   } else {
     addMessage('你好，我是灵语 Spark 的互动剧本主持人！给我一个主题（如"武侠""科幻""悬疑""末日"），或者直接说"开始"，我会为你展开一段分支故事。在每个关键节点，你可以从选项中选择下一步行动，决定故事的最终结局。', false)
+  }
+  await loadSessions()
+  if (!historySessions.value.some(s => s.chatId === chatId.value)) {
+    historySessions.value.unshift({
+      module: 'chat',
+      chatId: chatId.value,
+      title: '新会话',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    })
   }
 }
 

@@ -14,6 +14,11 @@ import java.util.TreeSet;
 /**
  * 合并本地 txt 配置与环境变量，统一维护本地敏感配置清单。
  */
+/**
+ * 本地环境文件读写服务。
+ *
+ * <p>用于在开发环境中维护本地配置文件，避免把敏感配置直接硬编码到源码或提交到仓库。</p>
+ */
 public class LocalEnvironmentFileService {
 
     public static final List<String> MANAGED_KEYS = List.of(
@@ -127,6 +132,9 @@ public class LocalEnvironmentFileService {
         return String.join(System.lineSeparator(), parts);
     }
 
+    /**
+     * 本地环境文件合并结果。
+     */
     public record MergeResult(List<String> writtenKeys, String safeSummary) {
     }
 }

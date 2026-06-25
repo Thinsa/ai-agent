@@ -15,6 +15,11 @@ import java.io.ByteArrayInputStream;
 
 @Service
 @EnableConfigurationProperties(AliyunOssProperties.class)
+/**
+ * OSS 对象存储服务。
+ *
+ * <p>统一封装阿里云 OSS 客户端初始化、对象上传和资源释放，供头像、上传文件和生成图片复用。</p>
+ */
 public class OssObjectStorageService implements DisposableBean {
 
     private static final Logger log = LoggerFactory.getLogger(OssObjectStorageService.class);

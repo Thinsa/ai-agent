@@ -17,6 +17,11 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "knowledge_document")
+/**
+ * 知识库文档实体。
+ *
+ * <p>保存可被 RAG 检索的原始文本、分类和启用状态，是向量化索引的业务来源。</p>
+ */
 public class KnowledgeDocument {
 
     @Id

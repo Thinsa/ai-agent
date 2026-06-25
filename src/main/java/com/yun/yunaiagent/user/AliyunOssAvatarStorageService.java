@@ -15,6 +15,11 @@ import java.util.UUID;
 
 @Service
 @EnableConfigurationProperties(AliyunOssProperties.class)
+/**
+ * 基于阿里云 OSS 的头像存储服务。
+ *
+ * <p>负责头像文件校验、对象 key 生成和上传后的公开访问地址返回。</p>
+ */
 public class AliyunOssAvatarStorageService implements AvatarStorageService {
 
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(

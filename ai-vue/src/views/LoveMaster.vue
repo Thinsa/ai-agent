@@ -48,6 +48,7 @@
         module="love"
         @select-session="loadHistory"
         @new-session="startNewSession"
+        @delete-session="handleDeleteSession"
       />
 
       <div class="chat-area">
@@ -80,7 +81,7 @@ import ChatHistorySidebar from '../components/ChatHistorySidebar.vue'
 import ChatRoom from '../components/ChatRoom.vue'
 import KnowledgeDocManager from '../components/KnowledgeDocManager.vue'
 import { useSseChat } from '../composables/useSseChat'
-import { chatWithLoveApp, chatWithLoveAppMcp, chatWithLoveAppRag, getChatHistory, listChatSessions, getKnowledgeDocumentCount } from '../api'
+import { chatWithLoveApp, chatWithLoveAppMcp, chatWithLoveAppRag, deleteChatSession, getChatHistory, listChatSessions, getKnowledgeDocumentCount } from '../api'
 
 useHead({
   title: '知心 Soul - LinkMind 灵桥',
@@ -144,6 +145,7 @@ const toPageMessage = message => {
   return {
     content,
     isUser: message.role === 'user',
+    type: message.role === 'user' ? 'user-question' : 'ai-answer',
     time: new Date(message.createdAt).getTime()
   }
 }
@@ -193,15 +195,41 @@ const loadHistory = async targetChatId => {
   const detail = await getChatHistory(targetChatId, 'love')
   chatId.value = detail.chatId
   messages.value = detail.messages.map(toPageMessage)
+  await loadSessions()
 }
 
-const startNewSession = () => {
+const handleDeleteSession = async (session) => {
+  const title = session.title || session.chatId
+  if (!confirm(`确定删除会话「${title}」？删除后不可恢复。`)) return
+  try {
+    await deleteChatSession(session.chatId, 'love')
+    historySessions.value = historySessions.value.filter(s => s.chatId !== session.chatId)
+    if (session.chatId === chatId.value) {
+      startNewSession()
+    }
+  } catch (e) {
+    console.error('Delete session failed:', e)
+  }
+}
+
+const startNewSession = async () => {
   closeStream()
   connectionStatus.value = 'disconnected'
   streamPaused.value = false
   chatId.value = generateChatId()
   messages.value = []
   addMessage('你好，我是知心 Soul，LinkMind 灵桥的情感伴侣。请告诉我你的心事，我会温柔倾听，给你贴心的建议。', false)
+  await loadSessions()
+  // 乐观插入：侧边栏立即可见，不写 DB，首条消息发出时由后端懒创建
+  if (!historySessions.value.some(s => s.chatId === chatId.value)) {
+    historySessions.value.unshift({
+      module: 'love',
+      chatId: chatId.value,
+      title: '新会话',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    })
+  }
 }
 
 const updateMcpEnabled = enabled => {

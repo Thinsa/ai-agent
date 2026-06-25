@@ -12,6 +12,11 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.Optional;
 
+/**
+ * JWT 令牌服务。
+ *
+ * <p>负责 token 的签发、解析、过期校验和用户身份提取，是前后端分离登录态的核心组件。</p>
+ */
 @Service
 public class JwtService {
 
@@ -76,9 +81,15 @@ public class JwtService {
         }
     }
 
+    /**
+     * 新签发令牌及过期信息。
+     */
     public record TokenInfo(String token, long expiresAt, long expiresIn) {
     }
 
+    /**
+     * 令牌校验通过后的身份信息。
+     */
     public record TokenValidation(String username, long expiresAt) {
     }
 }

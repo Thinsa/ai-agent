@@ -18,6 +18,11 @@ import java.util.regex.Pattern;
  * 后续可从数据库或对象存储补充自定义文档。</p>
  */
 @Component
+/**
+ * 内置知识文档加载器。
+ *
+ * <p>从 resources/document 读取初始语料并转换为统一文档对象，用于应用启动时初始化 RAG 数据。</p>
+ */
 public class LoveAppDocumentLoader {
 
     /**

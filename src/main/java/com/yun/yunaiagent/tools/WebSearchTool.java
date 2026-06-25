@@ -13,6 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
+/**
+ * Web 搜索工具。
+ *
+ * <p>封装 SearchAPI 查询与结果摘要格式化逻辑，让 Agent 可以获取实时网页信息。</p>
+ */
 public class WebSearchTool implements AgentTool {
 
     private static final int MAX_RESULTS = Constants.WEB_SEARCH_MAX_RESULTS;
@@ -128,10 +133,16 @@ public class WebSearchTool implements AgentTool {
     }
 
     @FunctionalInterface
+    /**
+     * 搜索 API 客户端抽象。
+     */
     interface SearchApiClient {
         String search(String query, String apiKey);
     }
 
+    /**
+     * 基于 RestClient 的 SearchAPI 客户端实现。
+     */
     private static class RestClientSearchApiClient implements SearchApiClient {
 
         private final RestClient restClient;

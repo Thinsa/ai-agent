@@ -19,6 +19,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/backgrounds")
+/**
+ * 用户背景设置接口。
+ *
+ * <p>保存和读取用户个性化背景配置，支撑前端主题或页面背景展示。</p>
+ */
 public class BackgroundController {
 
     private static final double MIN_OPACITY = 0.05;
@@ -81,5 +86,8 @@ public class BackgroundController {
         backgroundService.deleteBackground(SecurityUtils.currentUserId(authentication, userService), agentKey);
     }
 
+    /**
+     * 背景透明度更新请求。
+     */
     public record OpacityRequest(double opacity) {}
 }

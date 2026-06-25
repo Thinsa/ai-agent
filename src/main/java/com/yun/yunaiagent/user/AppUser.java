@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "app_user")
+/**
+ * 应用用户实体。
+ */
 public class AppUser {
 
     @Id

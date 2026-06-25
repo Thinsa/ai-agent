@@ -6,6 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * 聊天会话数据访问接口。
+ *
+ * <p>封装按模块、会话 ID、用户维度查找或创建会话的持久化能力。</p>
+ */
 public interface ChatConversationRepository extends JpaRepository<ChatConversation, Long> {
 
     Optional<ChatConversation> findByModuleAndChatIdAndUser(String module, String chatId, AppUser user);

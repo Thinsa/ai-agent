@@ -8,6 +8,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
+/**
+ * 用户账户业务服务。
+ *
+ * <p>负责注册、登录校验、资料更新和头像地址维护。</p>
+ */
 public class UserService {
 
     private final AppUserRepository repository;

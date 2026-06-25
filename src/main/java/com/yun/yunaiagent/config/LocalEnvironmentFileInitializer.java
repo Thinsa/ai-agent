@@ -16,6 +16,11 @@ import java.util.concurrent.TimeUnit;
  * 启动时把已存在的本地环境变量整合进 local-api-keys.txt。
  */
 @ConditionalOnProperty(name = "app.env-file.enabled", havingValue = "true")
+/**
+ * 应用启动时的本地环境文件初始化器。
+ *
+ * <p>在 Spring Boot 启动后检查必要的本地配置文件，降低首次运行时缺少环境文件的排查成本。</p>
+ */
 @Component
 public class LocalEnvironmentFileInitializer implements ApplicationRunner {
 

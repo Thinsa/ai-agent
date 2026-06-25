@@ -15,6 +15,11 @@ import java.util.List;
  * <p>Spring AI 1.0.0 的 AssistantMessage 未直接暴露 reasoning_content，
  * 推理内容可能存放在 ChatGenerationMetadata 中，使用 "reasoningContent" 键访问。</p>
  */
+/**
+ * 模型推理内容处理工具。
+ *
+ * <p>兼容不同模型返回的推理字段，将可展示的推理过程与最终回答统一整理给上层接口。</p>
+ */
 public final class ReasoningContentUtil {
 
     /** 推理内容在 ChatGenerationMetadata 中可能的 key */
@@ -27,7 +32,13 @@ public final class ReasoningContentUtil {
      * 从 Generation 中提取推理内容（尝试 metadata，回退常规 text）。
      */
     private static String extractText(Generation generation) {
+        if (generation == null) {
+            return "";
+        }
         AssistantMessage message = generation.getOutput();
+        if (message == null) {
+            return "";
+        }
         String text = message.getText();
         // Spring AI 1.0.0: reasoning 可能在 ChatGenerationMetadata 中
         ChatGenerationMetadata metadata = generation.getMetadata();
@@ -48,6 +59,9 @@ public final class ReasoningContentUtil {
      * 同步调用：合并思考过程和回答。
      */
     public static String withReasoning(ChatResponse response) {
+        if (response == null) {
+            return "";
+        }
         return extractText(response.getResult());
     }
 
@@ -57,6 +71,9 @@ public final class ReasoningContentUtil {
      */
     public static Flux<String> streamWithReasoning(Flux<ChatResponse> stream) {
         return stream.flatMap(response -> {
+            if (response == null) {
+                return Flux.empty();
+            }
             String text = extractText(response.getResult());
             return text.isBlank() ? Flux.empty() : Flux.just(text);
         });
