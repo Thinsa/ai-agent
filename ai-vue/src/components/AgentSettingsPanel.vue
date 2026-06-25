@@ -81,22 +81,45 @@
           <span v-if="showMcp" class="group-count">{{ mcpEnabled ? '1' : '0' }}/5</span>
         </div>
 
-        <div v-if="showMcp" class="ability-row">
-          <div class="ability-main">
-            <span class="ability-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M13 2 4 14h7l-1 8 10-13h-7z" />
-              </svg>
+        <div v-if="showMcp" class="mcp-directory">
+          <button class="ability-row mcp-parent" type="button" @click="mcpExpanded = !mcpExpanded">
+            <div class="ability-main">
+              <span class="ability-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M13 2 4 14h7l-1 8 10-13h-7z" />
+                </svg>
+              </span>
+              <div>
+                <span class="ability-name">MCP 服务</span>
+                <span class="ability-meta">{{ mcpSubCount }} 个技能</span>
+              </div>
+            </div>
+            <span class="mcp-arrow" :class="{ expanded: mcpExpanded }">
+              <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
             </span>
-            <div>
-              <span class="ability-name">MCP 服务</span>
-              <span class="ability-meta">{{ mcpEnabled ? '已启用' : '未启用' }}</span>
+          </button>
+
+          <div v-if="mcpExpanded" class="mcp-children">
+            <div class="ability-row mcp-child">
+              <div class="ability-main">
+                <span class="ability-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="m21 15-5-5-2 2-3-3-5 5" />
+                  </svg>
+                </span>
+                <div>
+                  <span class="ability-name">图片搜索</span>
+                  <span class="ability-meta">{{ mcpEnabled ? '已启用' : '未启用' }}</span>
+                </div>
+              </div>
+              <ToggleSwitch
+                :model-value="mcpEnabled"
+                @update:model-value="$emit('update:mcpEnabled', $event)"
+              />
             </div>
           </div>
-          <ToggleSwitch
-            :model-value="mcpEnabled"
-            @update:model-value="$emit('update:mcpEnabled', $event)"
-          />
         </div>
       </section>
     </div>
@@ -104,7 +127,10 @@
 </template>
 
 <script setup>
+import { computed, ref } from 'vue'
 import ToggleSwitch from './ToggleSwitch.vue'
+
+const mcpExpanded = ref(false)
 
 const props = defineProps({
   theme: {
@@ -165,6 +191,8 @@ const emit = defineEmits([
   'update:customPrompt',
   'open-knowledge-config'
 ])
+
+const mcpSubCount = computed(() => 1)
 
 const appendDocumentsVariable = () => {
   if (props.customPrompt.includes('${documents}')) {
@@ -248,6 +276,20 @@ const appendDocumentsVariable = () => {
 }
 .ability-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .ability-name { color: var(--color-text-1); font-size: 15px; font-weight: 800; }
+
+/* MCP directory */
+.mcp-directory { border-radius: var(--radius-sm); overflow: hidden; }
+.mcp-parent { cursor: pointer; user-select: none; }
+.mcp-parent:hover { background: var(--color-base-2); }
+.mcp-parent .ability-name { font-size: 16px; }
+.mcp-arrow {
+  display: inline-flex; align-items: center; color: var(--color-text-2);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.mcp-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+.mcp-arrow.expanded { transform: rotate(180deg); }
+.mcp-children { padding: 0; }
+.mcp-child { padding-left: 40px; border-radius: 0; background: transparent; border-top: var(--border-subtle); }
 
 @media (max-width: 768px) {
   .settings-panel { flex: 0 0 auto; width: 100%; height: auto; max-height: 420px; }
